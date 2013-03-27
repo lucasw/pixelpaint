@@ -126,12 +126,16 @@ void imageFileSelected(File selection) {
   }
 }
 
-void saveImage() {
+String saveImage() {
 
-  PImage partialSave = get(0,0,cwd,cht);
+  //PImage partialSave = get(0,0,cwd,cht);
   Date d = new Date();
   long ts = d.getTime();
-  partialSave.save("cur-" + ts + ".png");
+  //partialSave.save("cur-" + ts + ".png");
+  String name = "cur-" + ts + ".png";
+  img.save(name);
+
+  return name;
 }
 
 void setup() {
@@ -153,7 +157,7 @@ void setup() {
 
   if (img == null) {
     println("creating default 32x32 empty image");
-    img = createImage(32, 32, RGB); 
+    img = createImage(32, 32, ARGB); 
 
     setupPaletteDefault();
 
@@ -217,7 +221,7 @@ void setupPaletteDefault() {
   colors[14] = color(#ffff55); 
   colors[15] = color(#ffffff);
   // 100% transparent alpha
-  colors[16] = color(0x00ffffff);
+  colors[16] = color(0,0,0,0); //ffffff);
 
   for (int i = 0; i < colors.length; i++) {
     println(str(i) + " " + str((int)alpha(colors[i])));
@@ -296,8 +300,8 @@ void keyPressed() {
   img.updatePixels();
 
   if (key == 'p') {
-    saveImage();
-    println("saving frame");
+    String name = saveImage();
+    println("saving frame: " + name);
   } 
 
   // put last typed key on screen, TBD print multiple keys
