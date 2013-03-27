@@ -322,7 +322,56 @@ void keyPressed() {
   textFont(font);
   textSize(32);
   fill(255);
-  text(key, width - 128, height - 72);   
+  text(key, width - 128, height - 72);  
+
+
+  // arrow keys shift image around
+  int shift_x = 0;
+  int shift_y = 0;
+  boolean do_shift = false;
+  if (key == CODED) {
+    if (keyCode == UP) {
+      shift_y =  1;
+      do_shift = true;
+    }
+    if (keyCode == DOWN) {
+      shift_y = -1;
+      do_shift = true;
+    }
+    if (keyCode == LEFT) {
+      shift_x = 1;
+      do_shift = true;
+    }
+    if (keyCode == RIGHT) {
+      shift_x = -1;
+      do_shift = true;
+    }
+  }
+
+  if (do_shift) {
+    PImage temp = createImage(img.width, img.height, ARGB);
+   
+    temp.loadPixels();
+    for (int y = 0; y < img.height; y++) {
+    for (int x = 0; x < img.width;  x++) {
+
+      int src_ind = y * img.width + x;
+      int dx = (x + shift_x + img.width) % img.width;
+      int dy = (y + shift_y + img.height) % img.height;
+      int dst_ind = dy * img.width + dx; 
+      
+      temp.pixels[dst_ind] = img.pixels[src_ind];
+
+      //println("src_ind " + str(x) + " " + str(y)  + " -> " +
+      //    str(dx) + " " + str(dy) );
+    }}
+    temp.updatePixels();
+    
+    img = temp;
+    // copy is not reliable due to forced interpolation
+    //img.copy(temp, 0 ,0, img.width, img.height, 0, 0, img.width, img.height);
+    //img.updatePixels();
+  }
 }
 
 void draw() {
