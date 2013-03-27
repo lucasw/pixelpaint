@@ -79,7 +79,7 @@ void paletteFileSelected(File selection) {
   }
 }
 
-void setupPaletteFromImage() {
+void setupPaletteFromImage(PImage img) {
   
   HashMap colormap = new HashMap();
   
@@ -113,12 +113,12 @@ void setupPaletteFromImage() {
   }
 }
 
-void loadNewImage(String image_file) {
+void loadNewImage(String image_file, PImage img) {
   println("attempting to load " + image_file);
   img = loadImage(image_file);  // TBD pass in or return PImage instead
   println("loaded " + str(img.width) + "x" + str(img.height)); 
   
-  setupPaletteFromImage();
+  setupPaletteFromImage(img);
 }
 
 void imageFileSelected(File selection) {
@@ -126,11 +126,11 @@ void imageFileSelected(File selection) {
     println("Window was closed or the user hit cancel.");
   } else {
     println("User selected file " + selection.getAbsolutePath());
-    loadNewImage(selection.getAbsolutePath());
+    loadNewImage(selection.getAbsolutePath(), img);
   }
 }
 
-String saveImage() {
+String saveImage(PImage img) {
 
   //PImage partialSave = get(0,0,cwd,cht);
   Date d = new Date();
@@ -175,8 +175,7 @@ void setup() {
   if (args.length > 0) {
     image_file = args[0];
     
-    loadNewImage(image_file);
-
+    loadNewImage(image_file, img);
   }
 
   if (img == null) {
@@ -342,7 +341,7 @@ void keyPressed() {
 
   /////////////////////////
   if (key == 'p') {
-    String name = saveImage();
+    String name = saveImage(img);
     println("saving frame: " + name);
   } 
 
