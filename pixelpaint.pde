@@ -26,6 +26,9 @@
 
 import java.util.Date;
 
+import java.util.Iterator;
+import java.util.Map;
+
 PImage img;
 BufferedReader reader;
 
@@ -37,8 +40,8 @@ int cht = cwd;
 
 int lastColorIndex = 0;
 
-color[] colors = new color[16];
-char[] keys = new char[16];
+color[] colors = new color[17];
+char[] keys = new char[17];
 
 PFont font;
 
@@ -49,29 +52,78 @@ void loadPalette(String paletteFilePath) {
 
   reader = createReader(paletteFilePath);
 
-String lines[] = loadStrings(paletteFilePath);
+  String lines[] = loadStrings(paletteFilePath);
 
-for (int i = 0 ; i < lines.length; i++) {
-//  println(lines[i]);
-   int c = unhex("FF" + trim(lines[i]));
+  // TBD check for max length
+
+  for (int i = 0 ; i < lines.length; i++) {
+    //  println(lines[i]);
+    int c = unhex("FF" + trim(lines[i]));
     colors[i] = color(c);
     println("Updated color at " + i + " with hex value '" + trim(lines[i]) + "'" );
-}
-
+  }
   
 }
 
-
-
 // http://processing.org/reference/selectInput_.html
-void fileSelected(File selection) {
+void paletteFileSelected(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
   } else {
-    println("User selected " + selection.getAbsolutePath());
+    println("User selected palette " + selection.getAbsolutePath());
+    loadPalette(selection.getAbsolutePath());
+  }
+}
+
+void setupPaletteFromImage() {
+  
+  HashMap colormap = new HashMap();
+  
+  img.loadPixels();
+  for (int i = 0; i < img.pixels.length; i++) {
+        
+    String value = hex(img.pixels[i]);
+
+    Integer n =  (Integer)(colormap.get(value));
+    int count = (n != null? n.intValue() + 1 : 1);
+    colormap.put(value, count); 
   }
 
-  loadPalette(selection.getAbsolutePath());
+
+  // TBD need to sort the list
+  Iterator i =  colormap.entrySet().iterator();  // Get an iterator
+  
+  int ind = 0;
+  while (i.hasNext()) {
+    Map.Entry me = (Map.Entry)i.next();
+
+    int c = unhex( (String) (me.getKey()) );
+    if (ind < colors.length) {
+      colors[ind] = color(c);
+    }
+
+    print(str(ind) + " " + me.getKey() + " is ");
+    println(me.getValue());
+
+    ind++;
+  }
+}
+
+void loadNewImage(String image_file) {
+  println("attempting to load " + image_file);
+  img = loadImage(image_file);  // TBD pass in or return PImage instead
+  println("loaded " + str(img.width) + "x" + str(img.height)); 
+  
+  setupPaletteFromImage();
+}
+
+void imageFileSelected(File selection) {
+  if (selection == null) {
+    println("Window was closed or the user hit cancel.");
+  } else {
+    println("User selected file " + selection.getAbsolutePath());
+    loadNewImage(selection.getAbsolutePath());
+  }
 }
 
 void saveImage() {
@@ -94,10 +146,9 @@ void setup() {
   String image_file = "";
   if (args.length > 0) {
     image_file = args[0];
+    
+    loadNewImage(image_file);
 
-    println("attempting to load " + image_file);
-    img = loadImage(image_file);
-    println("loaded " + str(img.width) + "x" + str(img.height)); 
   }
 
   if (img == null) {
@@ -107,7 +158,10 @@ void setup() {
     setupPaletteDefault();
 
     img.loadPixels();
-    for (int i = 0; i < img.pixels.length; i++) { img.pixels[i] = colors[8]; }
+    for (int i = 0; i < img.pixels.length; i++) {
+      // default transparent
+      img.pixels[i] = colors[16]; 
+    }
 
     img.updatePixels();
 
@@ -139,6 +193,7 @@ void setupKeysDefault() {
   keys[13] = 'x';
   keys[14] = 'c';
   keys[15] = 'v';
+  keys[16] = 'g'; // alpha
 
 }
 
@@ -160,8 +215,13 @@ void setupPaletteDefault() {
   colors[12] = color(#ff5555); 
   colors[13] = color(#ff55ff); 
   colors[14] = color(#ffff55); 
-  colors[15] = color(#ffffff); 
-  // TBD need transparent color
+  colors[15] = color(#ffffff);
+  // 100% transparent alpha
+  colors[16] = color(0x00ffffff);
+
+  for (int i = 0; i < colors.length; i++) {
+    println(str(i) + " " + str((int)alpha(colors[i])));
+  }
 }
 
 
@@ -219,7 +279,11 @@ void keyPressed() {
   }
 
   if (key == 'L' ) {
-    selectInput("Select a file to process:", "fileSelected");
+    selectInput("Select a palette file to process:", "paletteFileSelected");
+  }
+  
+  if (key == 'o' ) {
+    selectInput("Select an image file to edit:", "imageFileSelected");
   }
 
   for (int i = 0; i < keys.length; i++) {
@@ -236,12 +300,12 @@ void keyPressed() {
     println("saving frame");
   } 
 
-
+  // put last typed key on screen, TBD print multiple keys
   noStroke();
   textFont(font);
   textSize(32);
   fill(255);
-  text(key, width - 64, height - 64);   
+  text(key, width - 128, height - 72);   
 }
 
 void draw() {
@@ -254,21 +318,33 @@ void draw() {
   noStroke();
   textFont(font);
   for (int i = 0; i < keys.length; i++) {  
-    fill(colors[i]); 
-
+    
     int x = cwd + 64 + (i % 4)*rwd*2;
     int y = 64 + (i/4)*rht*5;
+    
+    fill(0); 
+    rect(x - 2, y - 2, rwd*2 + 4, rht*4 + 4);
+
+    fill(colors[i]); 
+
 
     rect(x, y, rwd*2, rht*2);
 
+    fill(230); 
+    //textSize(38);
+    //text(keys[i], x + rwd/2 - 2, y + rht*3+4 + 1);  
+    //fill(colors[i]); 
     textSize(32);
-    text(keys[i], x + rwd/2, y + rht*3+4);   
+    text(keys[i], x + rwd/2, y + rht*3+4);  
+
+    // TBD print out tally of how many pixels in image use this color
   }
   
   // print current location
-  text(str(cur_x), width - 128, height - 128);   
-  text(str(cur_y), width - 128, height - 100);   
+  text("x " + str(cur_x), width - 128, height - 128);   
+  text("y " + str(cur_y), width - 128, height - 100);   
 
+  /// draw the edited image
   img.loadPixels(); 
 
   for (int j = 0; j < img.height; j++) {
@@ -276,10 +352,23 @@ void draw() {
       int ind = j * img.width + i;
       //stroke(255);
 
-      noStroke();
-      fill(img.pixels[ind]);
+      
+      if ((int)alpha(img.pixels[ind]) == 0) { 
+        // draw transparent pixel checkerboard
+        fill(110);
+        rect(i * rwd , j * rht , rwd, rht);
+        fill(80);
+        rect(i * rwd , j * rht , rwd/2, rht/2);
+        rect(i * rwd + rwd/2, j * rht + rht/2 , rwd/2, rht/2);
+      
+      } else {
+        // draw normal pixel
+        // TBD make stroke toggleable
+        noStroke();
+        fill(img.pixels[ind]);
+        rect(i * rwd , j * rht , rwd, rht);
+      }
 
-      rect(i * rwd , j * rht , rwd, rht);
 
     }
 
