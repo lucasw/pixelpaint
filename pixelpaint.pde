@@ -32,6 +32,8 @@ import java.util.Map;
 PImage img;
 BufferedReader reader;
 
+boolean drag_mode = false;
+
 int cur_x;
 int cur_y;
 
@@ -233,6 +235,7 @@ void setupPaletteDefault() {
 
 void keyPressed() {
 
+  // movement keys
   if (key == 'j') {
     cur_y += 1;
   } 
@@ -258,11 +261,11 @@ void keyPressed() {
     cur_y -= 1;
     cur_x += 1;
   }
-  if (key == 'n') {
+  if (key == 'b') {
     cur_y += 1;
     cur_x -= 1;
   }
-  if (key == 'm') {
+  if (key == 'n') {
     cur_y += 1;
     cur_x += 1;
   }
@@ -270,8 +273,12 @@ void keyPressed() {
   cur_x = (cur_x + img.width) % img.width;
   cur_y = (cur_y + img.height) % img.height;
 
-  // TBD need a toggleable drag mode where the last color is placed
+  // a toggleable drag mode where the last color is placed
   // under the cursor instead of having to press a key at every pixel
+  if (key == ';') {
+    drag_mode = !drag_mode;
+    println("drag_mode " + str(drag_mode));
+  }
 
   ////////////////////////////////////////////////
   img.loadPixels(); 
@@ -290,15 +297,21 @@ void keyPressed() {
     selectInput("Select an image file to edit:", "imageFileSelected");
   }
 
+  boolean key_pressed = false;
   for (int i = 0; i < keys.length; i++) {
     if (key == keys[i]) { 
-      img.pixels[ind] = colors[i]; 
       lastColorIndex = i;
+      key_pressed = true;
     }
+  }
+  
+  if (key_pressed || drag_mode) {
+    img.pixels[ind] = colors[lastColorIndex]; 
   }
 
   img.updatePixels();
 
+  /////////////////////////
   if (key == 'p') {
     String name = saveImage();
     println("saving frame: " + name);
