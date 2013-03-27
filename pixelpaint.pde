@@ -30,9 +30,11 @@ import java.util.Iterator;
 import java.util.Map;
 
 PImage img;
+PImage bg;
 BufferedReader reader;
 
 boolean drag_mode = false;
+boolean draw_grid = true;
 
 int cur_x;
 int cur_y;
@@ -140,6 +142,26 @@ String saveImage() {
   return name;
 }
 
+// setup the image that shows transparency
+void setupBackgroundImage() {
+  
+  bg.loadPixels();
+  // draw transparent pixel checkerboard
+  for (int j = 0; j < bg.height; j++) {
+    for (int i = 0; i < bg.width; i++) {
+      int ind = j * bg.width + i;
+      
+      bg.pixels[ind] = color(80);
+      if (((j % 8 < 4) && (i % 8 >= 4)) || 
+          ((j % 8 >= 4) && (i % 8 < 4))) { 
+        bg.pixels[ind] = color(110);
+      }
+
+  }}
+
+  bg.updatePixels();
+}
+
 void setup() {
 
   size(cwd *1920/1080, cht);
@@ -160,6 +182,9 @@ void setup() {
   if (img == null) {
     println("creating default 32x32 empty image");
     img = createImage(32, 32, ARGB); 
+    
+    bg = createImage(img.width * 8, img.height * 8, ARGB);
+    setupBackgroundImage();
 
     setupPaletteDefault();
 
@@ -280,6 +305,10 @@ void keyPressed() {
     println("drag_mode " + str(drag_mode));
   }
 
+  if (key == '5') {
+    draw_grid = !draw_grid;
+    println("draw_grid " + str(draw_grid));
+  }
   ////////////////////////////////////////////////
   img.loadPixels(); 
 
@@ -381,11 +410,12 @@ void draw() {
   int rwd = cwd / img.width;
   int rht = cht / img.height;
 
+  // draw all the colors and keys
   noStroke();
   textFont(font);
   for (int i = 0; i < keys.length; i++) {  
     
-    int x = cwd + 64 + (i % 4)*rwd*2;
+    int x = cwd + 128 + (i % 4)*rwd*2;
     int y = 64 + (i/4)*rht*5;
     
     fill(0); 
@@ -410,39 +440,64 @@ void draw() {
   text("x " + str(cur_x), width - 128, height - 128);   
   text("y " + str(cur_y), width - 128, height - 100);   
 
+
+  // lay down the background that shows where the image is transparent
+  image(bg, 0, 0, cwd, cwd);
+
+  drawImage(img, 0, 0, rwd, rht, draw_grid);
+
+  // draw the cursor
+  {
+  stroke(0);
+  strokeWeight(2);
+  fill(255); 
+  rect(cur_x * rwd + rwd/4, cur_y * rht + rht/4, rwd/2, rht/2);
+  }
+
+  // draw a thumbnail, interpolated and ugly for now
+  { 
+    int sc = 3;
+    int x = cwd + 10;
+    int y = height - img.height * sc - 10;
+    int w = img.width * sc;
+    int h = img.height * sc;
+
+    stroke(255);
+    fill(100);
+    rect(x-1, y-1, w+1, h+1);
+    drawImage(img, x, y, sc, sc, false);
+  }
+}
+
+// draw nice pixellated image, probably somewhat computationally
+// expensive.
+void drawImage(PImage im, int x, int y, int rwd, int rht, boolean draw_grid)
+{
   /// draw the edited image
   img.loadPixels(); 
 
-  for (int j = 0; j < img.height; j++) {
-    for (int i = 0; i < img.width; i++) {
-      int ind = j * img.width + i;
+  if (draw_grid) {
+    strokeWeight(1.0);
+    stroke(0, 60);
+  } else {
+    noStroke();
+  }
+
+  for (int j = 0; j < im.height; j++) {
+    for (int i = 0; i < im.width; i++) {
+      int ind = j * im.width + i;
       //stroke(255);
 
       
-      if ((int)alpha(img.pixels[ind]) == 0) { 
-        // draw transparent pixel checkerboard
-        fill(110);
-        rect(i * rwd , j * rht , rwd, rht);
-        fill(80);
-        rect(i * rwd , j * rht , rwd/2, rht/2);
-        rect(i * rwd + rwd/2, j * rht + rht/2 , rwd/2, rht/2);
-      
-      } else {
+      if ((int)alpha(im.pixels[ind]) != 0) { 
         // draw normal pixel
         // TBD make stroke toggleable
-        noStroke();
-        fill(img.pixels[ind]);
-        rect(i * rwd , j * rht , rwd, rht);
+        fill(im.pixels[ind]);
+        rect(x + i * rwd , y + j * rht , rwd, rht);
       }
 
 
     }
 
   }
-
-  stroke(0);
-  strokeWeight(2);
-  fill(255); 
-  rect(cur_x * rwd + rwd/4, cur_y * rht + rht/4, rwd/2, rht/2);
-
 }
