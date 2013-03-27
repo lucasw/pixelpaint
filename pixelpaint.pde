@@ -85,12 +85,43 @@ void saveImage() {
 void setup() {
 
   size(cwd *1920/1080, cht);
-  img = createImage(32, 32, RGB); 
+
+  println(str(args.length) + " arguments");
+  for (int i = 0; i < args.length; i++) {
+    println(args[0]);
+  }
+
+  String image_file = "";
+  if (args.length > 0) {
+    image_file = args[0];
+
+    println("attempting to load " + image_file);
+    img = loadImage(image_file);
+    println("loaded " + str(img.width) + "x" + str(img.height)); 
+  }
+
+  if (img == null) {
+    println("creating default 32x32 empty image");
+    img = createImage(32, 32, RGB); 
+
+    setupPaletteDefault();
+
+    img.loadPixels();
+    for (int i = 0; i < img.pixels.length; i++) { img.pixels[i] = colors[8]; }
+
+    img.updatePixels();
+
+  }
 
   font = createFont("Courier 10 Pitch", 8, false);
 
   cur_x = img.width/2;
   cur_y = img.height/2;
+
+  setupKeysDefault();
+}
+
+void setupKeysDefault() {
 
   keys[0]  = '1';
   keys[1]  = '2';
@@ -109,6 +140,11 @@ void setup() {
   keys[14] = 'c';
   keys[15] = 'v';
 
+}
+
+void setupPaletteDefault() {
+
+  println("using default EGA palette");
   colors[0]  = color(#000000); 
   colors[1]  = color(#0000AA); 
   colors[2]  = color(#00AA00); 
@@ -125,38 +161,53 @@ void setup() {
   colors[13] = color(#ff55ff); 
   colors[14] = color(#ffff55); 
   colors[15] = color(#ffffff); 
-
-  img.loadPixels();
-  for (int i = 0; i < img.pixels.length; i++) { img.pixels[i] = colors[8]; }
-
-  img.updatePixels();
+  // TBD need transparent color
 }
 
 
 // Use vi-style navigation j/k = down/up, h/l for left/right
 
 void keyPressed() {
+
   if (key == 'j') {
     cur_y += 1;
-    cur_y = (cur_y + img.height) % img.height;
   } 
 
   if (key == 'k') {
     cur_y -= 1;
-    cur_y = (cur_y + img.height) % img.height;
   } 
 
   if (key == 'h') {
     cur_x -= 1;
-    cur_x = (cur_x + img.width) % img.width;
   } 
 
   if (key == 'l') {
     cur_x += 1;
-    cur_x = (cur_x + img.width) % img.width;
   } 
+  
+  // diagonal keys (not used in vi but standard in roguelikes?)
+  if (key == 'y') {
+    cur_y -= 1;
+    cur_x -= 1;
+  } 
+  if (key == 'u') {
+    cur_y -= 1;
+    cur_x += 1;
+  }
+  if (key == 'n') {
+    cur_y += 1;
+    cur_x -= 1;
+  }
+  if (key == 'm') {
+    cur_y += 1;
+    cur_x += 1;
+  }
 
+  cur_x = (cur_x + img.width) % img.width;
+  cur_y = (cur_y + img.height) % img.height;
 
+  // TBD need a toggleable drag mode where the last color is placed
+  // under the cursor instead of having to press a key at every pixel
 
   ////////////////////////////////////////////////
   img.loadPixels(); 
@@ -190,10 +241,11 @@ void keyPressed() {
   textFont(font);
   textSize(32);
   fill(255);
-  text(key, width-64, height-64);   
+  text(key, width - 64, height - 64);   
 }
 
 void draw() {
+
   background(32);
 
   int rwd = cwd / img.width;
@@ -212,11 +264,12 @@ void draw() {
     textSize(32);
     text(keys[i], x + rwd/2, y + rht*3+4);   
   }
-
+  
+  // print current location
+  text(str(cur_x), width - 128, height - 128);   
+  text(str(cur_y), width - 128, height - 100);   
 
   img.loadPixels(); 
-
-
 
   for (int j = 0; j < img.height; j++) {
     for (int i = 0; i < img.width; i++) {
