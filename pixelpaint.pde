@@ -31,10 +31,17 @@ import java.util.Map;
 
 PImage img;
 PImage bg;
+
+ArrayList imgs;
+int imgs_ind = 0;
+
 BufferedReader reader;
 
 boolean drag_mode = false;
 boolean draw_grid = true;
+boolean add_frame = false;
+boolean next_frame = false;
+boolean prev_frame = false;
 
 int cur_x;
 int cur_y;
@@ -194,8 +201,9 @@ void setup() {
     }
 
     img.updatePixels();
-
   }
+  imgs = new ArrayList();
+  imgs.add(img);
 
   font = createFont("Courier 10 Pitch", 8, false);
 
@@ -205,6 +213,7 @@ void setup() {
   setupKeysDefault();
 }
 
+// color selection kesy
 void setupKeysDefault() {
 
   keys[0]  = '1';
@@ -254,6 +263,10 @@ void setupPaletteDefault() {
   }
 }
 
+
+int shift_x = 0;
+int shift_y = 0;
+boolean do_shift = false;
 
 // Use vi-style navigation j/k = down/up, h/l for left/right
 
@@ -308,15 +321,7 @@ void keyPressed() {
     draw_grid = !draw_grid;
     println("draw_grid " + str(draw_grid));
   }
-  ////////////////////////////////////////////////
-  img.loadPixels(); 
-
-  int ind = cur_y * img.width + cur_x;
-
-  if (key == ' ') {
-    img.pixels[ind] = colors[lastColorIndex]; 
-  }
-
+ 
   if (key == 'L' ) {
     selectInput("Select a palette file to process:", "paletteFileSelected");
   }
@@ -325,19 +330,22 @@ void keyPressed() {
     selectInput("Select an image file to edit:", "imageFileSelected");
   }
 
-  boolean key_pressed = false;
-  for (int i = 0; i < keys.length; i++) {
-    if (key == keys[i]) { 
-      lastColorIndex = i;
-      key_pressed = true;
-    }
+  // animation
+  if (key == '0') {
+    // add frame to sequence
+    add_frame = true;
   }
   
-  if (key_pressed || drag_mode) {
-    img.pixels[ind] = colors[lastColorIndex]; 
+  if (key == '9') {
+    // go to next frame in sequence
+    next_frame = true;
   }
+  
+  if (key == '8') {
+    prev_frame = true;
 
-  img.updatePixels();
+    
+  }
 
   /////////////////////////
   if (key == 'p') {
@@ -354,9 +362,6 @@ void keyPressed() {
 
 
   // arrow keys shift image around
-  int shift_x = 0;
-  int shift_y = 0;
-  boolean do_shift = false;
   if (key == CODED) {
     if (keyCode == UP) {
       shift_y =  1;
@@ -374,6 +379,65 @@ void keyPressed() {
       shift_x = -1;
       do_shift = true;
     }
+  }
+
+ 
+  ////////////////////////////////////////////////
+  // draw on pixel
+  {
+  img.loadPixels(); 
+
+  int ind = cur_y * img.width + cur_x;
+
+  if (key == ' ') {
+    img.pixels[ind] = colors[lastColorIndex]; 
+  }
+
+
+  boolean key_pressed = false;
+  for (int i = 0; i < keys.length; i++) {
+    if (key == keys[i]) { 
+      lastColorIndex = i;
+      key_pressed = true;
+    }
+  }
+  
+  if (key_pressed || drag_mode) {
+    img.pixels[ind] = colors[lastColorIndex]; 
+  }
+
+  img.updatePixels();
+  }
+
+}
+
+void draw() {
+
+  /// update stuff
+  if (add_frame) {
+    PImage temp = img.get(0, 0, img.width, img.height);
+    //PImage temp = createImage(img.width, img.height, ARGB);
+    imgs_ind += 1;
+    imgs.add(imgs_ind, temp); // index
+    img = (PImage)imgs.get(imgs_ind); // should get temp right back
+    println("added frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+    add_frame = false;
+  }
+
+  if (prev_frame) {
+      // go to previous frame in sequence
+      imgs_ind -= 1;
+      imgs_ind = (imgs_ind + imgs.size()) % imgs.size();
+      img = (PImage)imgs.get(imgs_ind); // should get temp right back
+      println("went back a frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+      prev_frame = false;
+  }
+  if (next_frame) {
+      imgs_ind += 1;
+      imgs_ind = (imgs_ind + imgs.size()) % imgs.size();
+      img = (PImage)imgs.get(imgs_ind); // should get temp right back
+      println("advanced frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+      next_frame = false;
   }
 
   if (do_shift) {
@@ -394,16 +458,19 @@ void keyPressed() {
       //    str(dx) + " " + str(dy) );
     }}
     temp.updatePixels();
-    
+   
     img = temp;
+    imgs.set(imgs_ind, img);
     // copy is not reliable due to forced interpolation
     //img.copy(temp, 0 ,0, img.width, img.height, 0, 0, img.width, img.height);
     //img.updatePixels();
-  }
-}
 
-void draw() {
+    shift_x = 0;
+    shift_y = 0;
+    do_shift = false;
+  } // do_shift
 
+  /////// draw stuff
   background(32);
 
   int rwd = cwd / img.width;
@@ -453,18 +520,25 @@ void draw() {
   rect(cur_x * rwd + rwd/4, cur_y * rht + rht/4, rwd/2, rht/2);
   }
 
-  // draw a thumbnail, interpolated and ugly for now
-  { 
+  // draw a thumbnail of all frames in sequence
+  for (int i = 0; i < 5; i++) {
+    int real_ind = imgs_ind + (i - 2);
+    real_ind = (real_ind + imgs.size()) % imgs.size();
+
     int sc = 3;
     int x = cwd + 10;
-    int y = height - img.height * sc - 10;
     int w = img.width * sc;
     int h = img.height * sc;
+    int y = i * (h + 10) + 10; //height - img.height * sc - 10;
 
-    stroke(255);
     fill(100);
+    stroke(155);
+    if (i == 2) {
+      stroke(255);
+    }
     rect(x-1, y-1, w+1, h+1);
-    drawImage(img, x, y, sc, sc, false);
+    //println(str(real_ind) + " " + str(imgs.size()) );
+    drawImage((PImage)imgs.get(real_ind), x, y, sc, sc, false);
   }
 }
 
