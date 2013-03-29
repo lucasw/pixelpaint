@@ -443,20 +443,67 @@ boolean floodFillLeftRight(
   return true;
 }
 
-// lazy flood, doesn't go around corners
+class XY {
+  int x;
+  int y;
+
+  XY(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+}
+
+boolean testXY(PImage img, XY xy, color match_color) {
+  if (xy.x >= img.width)  { return false; }
+  if (xy.y >= img.height) { return false; }
+  if (xy.x < 0) { return false; }
+  if (xy.y < 0) { return false; }
+  return (img.pixels[xy.y * img.width + xy.x] == match_color);
+}
+
+// try http://en.wikipedia.org/wiki/Flood_fill next
 boolean floodFill(
   PImage img, 
   int cur_x, 
   int cur_y, 
   color color_to_replace, 
   color color_to_flood) {
-  
+
+  if (color_to_replace == color_to_flood) { return false; }
   /// TBD should this wrap or not or optionally?
   if (cur_x >= img.width)  { return false; }
   if (cur_y >= img.height) { return false; }
   if (cur_x < 0) { return false; }
   if (cur_y < 0) { return false; }
   
+  println("floodfilling");
+  
+  ArrayList fillq = new ArrayList();
+  
+  XY xy = new XY(cur_x, cur_y);
+  fillq.add(xy);
+
+  // TBD force the cur_x cur_y always to be the match_color?
+  //img.pixels[xy.y * img.width + xy.x] = color_to_replace;
+  
+  int num_flooded = 0;
+
+  while (fillq.size() > 0) {
+    XY nxy = (XY) fillq.get(fillq.size()-1);
+    fillq.remove(fillq.size()-1);
+
+    if (testXY(img, nxy, color_to_replace)) {
+      img.pixels[nxy.y * img.width + nxy.x] = color_to_flood;
+      num_flooded++;
+      fillq.add(new XY(nxy.x - 1, nxy.y));
+      fillq.add(new XY(nxy.x + 1, nxy.y));
+      fillq.add(new XY(nxy.x, nxy.y - 1));
+      fillq.add(new XY(nxy.x, nxy.y + 1));
+    }
+  }
+
+  println("floodfilling done " + str(num_flooded));
+  /*
   for (int y = cur_y; y < img.width; y++) {
     int indy = y * img.width + cur_x;
     if (img.pixels[indy] != color_to_replace) {
@@ -473,6 +520,7 @@ boolean floodFill(
     floodFillLeftRight(img, cur_x, y, color_to_replace, color_to_flood);
   } 
   
+  */
   
   // vertical flood
 
