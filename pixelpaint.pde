@@ -279,7 +279,8 @@ void setupPaletteDefault() {
 int shift_x = 0;
 int shift_y = 0;
 boolean do_shift = false;
-
+boolean do_pixel_change = false;
+boolean do_flood_fill = false;
 // Use vi-style navigation j/k = down/up, h/l for left/right
 
 void keyPressed() {
@@ -397,29 +398,19 @@ void keyPressed() {
  
   ////////////////////////////////////////////////
   // draw on pixel
-  {
-  img.loadPixels(); 
-
-  int ind = cur_y * img.width + cur_x;
-
-  if (key == ' ') {
-    img.pixels[ind] = colors[lastColorIndex]; 
-  }
-
-
-  boolean key_pressed = false;
   for (int i = 0; i < keys.length; i++) {
     if (key == keys[i]) { 
       lastColorIndex = i;
-      key_pressed = true;
+      do_pixel_change = true;
     }
   }
-  
-  if (key_pressed || drag_mode) {
-    img.pixels[ind] = colors[lastColorIndex]; 
+ 
+  if (key == ' ') {
+    do_pixel_change = true;
   }
 
-  img.updatePixels();
+  if (key == 'i') {
+    do_flood_fill = true;
   }
 
 }
@@ -429,6 +420,7 @@ int anim_ind = 0;
 
 void draw() {
 
+ 
   /// update stuff
   if (add_frame) {
     PImage temp = img.get(0, 0, img.width, img.height);
@@ -567,9 +559,12 @@ void draw() {
   count++;
   anim_ind %= imgs.size();
   int y = 5 * (h + 5) + 10; //height - img.height * sc - 10;
+  fill(100);
+  stroke(155);
   rect(x-1, y-1, w+1, h+1);
   drawImage((PImage)imgs.get(anim_ind), x, y, sc, sc, false);
-}
+
+} // draw
 
 // draw nice pixellated image, probably somewhat computationally
 // expensive.
@@ -577,6 +572,13 @@ void drawImage(PImage im, int x, int y, int rwd, int rht, boolean draw_grid)
 {
   /// draw the edited image
   img.loadPixels(); 
+
+  if (do_pixel_change || drag_mode) {
+    int ind = cur_y * img.width + cur_x;
+    img.pixels[ind] = colors[lastColorIndex]; 
+    img.updatePixels();
+    do_pixel_change = false;
+  }
 
   if (draw_grid) {
     strokeWeight(1.0);
