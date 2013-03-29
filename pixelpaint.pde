@@ -49,7 +49,7 @@ int cur_y;
 int cwd = 640;
 int cht = cwd;
 
-int lastColorIndex = 0;
+int last_color_index = 0;
 
 color[] colors = new color[17];
 char[] keys = new char[17];
@@ -400,7 +400,7 @@ void keyPressed() {
   // draw on pixel
   for (int i = 0; i < keys.length; i++) {
     if (key == keys[i]) { 
-      lastColorIndex = i;
+      last_color_index = i;
       do_pixel_change = true;
     }
   }
@@ -415,9 +415,81 @@ void keyPressed() {
 
 }
 
+boolean floodFillLeftRight(
+  PImage img, 
+  int cur_x, 
+  int cur_y, 
+  color color_to_replace, 
+  color color_to_flood) {
+ 
+ // flood to right
+  for (int x = cur_x; x < img.width; x++) {
+    int ind = cur_y * img.width + x;
+    if (img.pixels[ind] != color_to_replace) {
+      break;
+    }  
+    img.pixels[ind] = color_to_flood;
+  }
+
+  // flood to left
+  for (int x = cur_x - 1; x >= 0; x--) {
+    int ind = cur_y * img.width + x;
+    if (img.pixels[ind] != color_to_replace) {
+      break;
+    }  
+    img.pixels[ind] = color_to_flood;
+  }
+
+  return true;
+}
+
+// lazy flood, doesn't go around corners
+boolean floodFill(
+  PImage img, 
+  int cur_x, 
+  int cur_y, 
+  color color_to_replace, 
+  color color_to_flood) {
+  
+  /// TBD should this wrap or not or optionally?
+  if (cur_x >= img.width)  { return false; }
+  if (cur_y >= img.height) { return false; }
+  if (cur_x < 0) { return false; }
+  if (cur_y < 0) { return false; }
+  
+  for (int y = cur_y; y < img.width; y++) {
+    int indy = y * img.width + cur_x;
+    if (img.pixels[indy] != color_to_replace) {
+      break;
+    }  
+    floodFillLeftRight(img, cur_x, y, color_to_replace, color_to_flood);
+  } 
+  
+  for (int y = cur_y - 1; y >= 0; y--) {
+    int indy = y * img.width + cur_x;
+    if (img.pixels[indy] != color_to_replace) {
+      break;
+    }  
+    floodFillLeftRight(img, cur_x, y, color_to_replace, color_to_flood);
+  } 
+  
+  
+  // vertical flood
+
+/*
+// this is too recursive, results in StackOverflowError: This sketch is attempting too much recursion
+  floodFill(img, cur_x + 1, cur_y, color_to_replace, color_to_flood);
+  floodFill(img, cur_x - 1, cur_y, color_to_replace, color_to_flood);
+  floodFill(img, cur_x, cur_y + 1, color_to_replace, color_to_flood);
+  floodFill(img, cur_x, cur_y - 1, color_to_replace, color_to_flood);
+*/
+  return true;
+}
+
 int count = 0;
 int anim_ind = 0;
 
+///////////////////////////////////////////////////////////////////////////////
 void draw() {
 
  
@@ -485,19 +557,23 @@ void draw() {
   int rht = cht / img.height;
 
   // draw all the colors and keys
-  noStroke();
   textFont(font);
   for (int i = 0; i < keys.length; i++) {  
     
-    int x = cwd + 128 + (i % 4)*rwd*2;
+    int x = cwd + 256 + (i % 4)*(rwd*2 + 6);
     int y = 64 + (i/4)*rht*5;
-    
+
+    if (i == last_color_index) {
+      stroke(220);
+    } else {
+      noStroke();
+    }
+
     fill(0); 
     rect(x - 2, y - 2, rwd*2 + 4, rht*4 + 4);
-
+    
+    // TBD check if transparent color and draw checkers
     fill(colors[i]); 
-
-
     rect(x, y, rwd*2, rht*2);
 
     fill(230); 
@@ -575,9 +651,18 @@ void drawImage(PImage im, int x, int y, int rwd, int rht, boolean draw_grid)
 
   if (do_pixel_change || drag_mode) {
     int ind = cur_y * img.width + cur_x;
-    img.pixels[ind] = colors[lastColorIndex]; 
+    img.pixels[ind] = colors[last_color_index]; 
     img.updatePixels();
     do_pixel_change = false;
+  }
+
+  if (do_flood_fill) {
+    int ind = cur_y * img.width + cur_x;
+    color color_to_replace = img.pixels[ind];
+    color color_to_flood = colors[last_color_index]; 
+    floodFill(img, cur_x, cur_y, color_to_replace, color_to_flood); 
+    img.updatePixels();
+    do_flood_fill = false;
   }
 
   if (draw_grid) {
