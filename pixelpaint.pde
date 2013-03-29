@@ -149,6 +149,18 @@ String saveImage(PImage img) {
   return name;
 }
 
+void saveImageSequence(ArrayList imgs) {
+
+  Date d = new Date();
+  long ts = d.getTime();
+  for (int i = 0; i < imgs.size(); i++) {
+    PImage img = (PImage)imgs.get(i); 
+    String name = "imageseq_" + ts + "_" + (10000 + i) + ".png";
+    img.save(name);
+  }
+  println("saved " + str(imgs.size()) + " images " + str(ts));
+}
+
 // setup the image that shows transparency
 void setupBackgroundImage() {
   
@@ -349,8 +361,9 @@ void keyPressed() {
 
   /////////////////////////
   if (key == 'p') {
-    String name = saveImage(img);
-    println("saving frame: " + name);
+    //String name = saveImage(img);
+    //println("saving frame: " + name);
+    saveImageSequence(imgs);
   } 
 
   // put last typed key on screen, TBD print multiple keys
@@ -411,6 +424,9 @@ void keyPressed() {
 
 }
 
+int count = 0;
+int anim_ind = 0;
+
 void draw() {
 
   /// update stuff
@@ -420,7 +436,7 @@ void draw() {
     imgs_ind += 1;
     imgs.add(imgs_ind, temp); // index
     img = (PImage)imgs.get(imgs_ind); // should get temp right back
-    println("added frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+    //println("added frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
     add_frame = false;
   }
 
@@ -429,14 +445,14 @@ void draw() {
       imgs_ind -= 1;
       imgs_ind = (imgs_ind + imgs.size()) % imgs.size();
       img = (PImage)imgs.get(imgs_ind); // should get temp right back
-      println("went back a frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+      //println("went back a frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
       prev_frame = false;
   }
   if (next_frame) {
       imgs_ind += 1;
       imgs_ind = (imgs_ind + imgs.size()) % imgs.size();
       img = (PImage)imgs.get(imgs_ind); // should get temp right back
-      println("advanced frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+      //println("advanced frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
       next_frame = false;
   }
 
@@ -501,7 +517,10 @@ void draw() {
 
     // TBD print out tally of how many pixels in image use this color
   }
-  
+ 
+  text("frame " + str(imgs_ind + 1) + "/" + imgs.size(), 
+      width - 256, height - 32);
+
   // print current location
   text("x " + str(cur_x), width - 128, height - 128);   
   text("y " + str(cur_y), width - 128, height - 100);   
@@ -521,15 +540,15 @@ void draw() {
   }
 
   // draw a thumbnail of all frames in sequence
+  int sc = 3;
+  int x = cwd + 10;
+  int w = img.width * sc;
+  int h = img.height * sc;
   for (int i = 0; i < 5; i++) {
     int real_ind = imgs_ind + (i - 2);
     real_ind = (real_ind + imgs.size()) % imgs.size();
 
-    int sc = 3;
-    int x = cwd + 10;
-    int w = img.width * sc;
-    int h = img.height * sc;
-    int y = i * (h + 10) + 10; //height - img.height * sc - 10;
+    int y = i * (h + 5) + 10; //height - img.height * sc - 10;
 
     fill(100);
     stroke(155);
@@ -540,6 +559,16 @@ void draw() {
     //println(str(real_ind) + " " + str(imgs.size()) );
     drawImage((PImage)imgs.get(real_ind), x, y, sc, sc, false);
   }
+
+  // slow down animation
+  if (count % 7 == 0) {
+    anim_ind++;
+  }
+  count++;
+  anim_ind %= imgs.size();
+  int y = 5 * (h + 5) + 10; //height - img.height * sc - 10;
+  rect(x-1, y-1, w+1, h+1);
+  drawImage((PImage)imgs.get(anim_ind), x, y, sc, sc, false);
 }
 
 // draw nice pixellated image, probably somewhat computationally
