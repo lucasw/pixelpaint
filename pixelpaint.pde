@@ -37,6 +37,7 @@ int imgs_ind = 0;
 
 BufferedReader reader;
 
+boolean palette_select_draws_mode = true;
 boolean drag_mode = false;
 boolean draw_grid = true;
 boolean add_frame = false;
@@ -53,6 +54,9 @@ int last_color_index = 0;
 
 color[] colors = new color[17];
 char[] keys = new char[17];
+
+String prefix;
+color prev_pixel_color;
 
 PFont font;
 
@@ -149,16 +153,19 @@ String saveImage(PImage img) {
   return name;
 }
 
-void saveImageSequence(ArrayList imgs) {
+int save_count = 0;
 
-  Date d = new Date();
-  long ts = d.getTime();
+void saveImageSequence(ArrayList imgs, String prefix) {
+
   for (int i = 0; i < imgs.size(); i++) {
     PImage img = (PImage)imgs.get(i); 
-    String name = "imageseq_" + ts + "_" + (10000 + i) + ".png";
+    String name = prefix + "_" + str(1000 + save_count) + "_" + (10000 + i) + ".png";
     img.save(name);
   }
-  println("saved " + str(imgs.size()) + " images " + str(ts));
+  println("saved " + str(imgs.size()) + " images " + prefix + " " + 
+     str(save_count));
+
+  save_count++;
 }
 
 // setup the image that shows transparency
@@ -184,6 +191,13 @@ void setupBackgroundImage() {
 void setup() {
 
   size(cwd *1920/1080, cht);
+
+  {
+    // TBD make ability to set this?
+    Date d = new Date();
+    long ts = d.getTime();
+    prefix = "imageseq_" + ts;
+  }
 
   println(str(args.length) + " arguments");
   for (int i = 0; i < args.length; i++) {
@@ -329,6 +343,11 @@ void keyPressed() {
     drag_mode = !drag_mode;
     println("drag_mode " + str(drag_mode));
   }
+  
+  if (key == '/') {
+    palette_select_draws_mode = !palette_select_draws_mode;
+    println("palette_select_draws_mode " + str(palette_select_draws_mode));
+  }
 
   if (key == '5') {
     draw_grid = !draw_grid;
@@ -364,7 +383,7 @@ void keyPressed() {
   if (key == 'p') {
     //String name = saveImage(img);
     //println("saving frame: " + name);
-    saveImageSequence(imgs);
+    saveImageSequence(imgs, prefix);
   } 
 
   // put last typed key on screen, TBD print multiple keys
@@ -401,11 +420,13 @@ void keyPressed() {
   for (int i = 0; i < keys.length; i++) {
     if (key == keys[i]) { 
       last_color_index = i;
-      do_pixel_change = true;
+      if (palette_select_draws_mode) {
+        do_pixel_change = true;
+      }
     }
   }
  
-  if (key == ' ') {
+  if ((key == ' ') || (key == 'm')) {
     do_pixel_change = true;
   }
 
@@ -453,12 +474,16 @@ class XY {
   }
 }
 
-boolean testXY(PImage img, XY xy, color match_color) {
+boolean testXY(PImage img, XY xy, 
+    color color_to_replace 
+    ) {
+
   if (xy.x >= img.width)  { return false; }
   if (xy.y >= img.height) { return false; }
   if (xy.x < 0) { return false; }
   if (xy.y < 0) { return false; }
-  return (img.pixels[xy.y * img.width + xy.x] == match_color);
+ 
+  return (img.pixels[xy.y * img.width + xy.x] == color_to_replace);
 }
 
 // try http://en.wikipedia.org/wiki/Flood_fill next
@@ -476,15 +501,12 @@ boolean floodFill(
   if (cur_x < 0) { return false; }
   if (cur_y < 0) { return false; }
   
-  println("floodfilling");
+  //println("floodfilling");
   
   ArrayList fillq = new ArrayList();
   
   XY xy = new XY(cur_x, cur_y);
   fillq.add(xy);
-
-  // TBD force the cur_x cur_y always to be the match_color?
-  //img.pixels[xy.y * img.width + xy.x] = color_to_replace;
   
   int num_flooded = 0;
 
@@ -502,7 +524,7 @@ boolean floodFill(
     }
   }
 
-  println("floodfilling done " + str(num_flooded));
+  //println("floodfilling done " + str(num_flooded));
   /*
   for (int y = cur_y; y < img.width; y++) {
     int indy = y * img.width + cur_x;
@@ -543,6 +565,7 @@ void draw() {
  
   /// update stuff
   if (add_frame) {
+
     PImage temp = img.get(0, 0, img.width, img.height);
     //PImage temp = createImage(img.width, img.height, ARGB);
     imgs_ind += 1;
@@ -688,6 +711,12 @@ void draw() {
   rect(x-1, y-1, w+1, h+1);
   drawImage((PImage)imgs.get(anim_ind), x, y, sc, sc, false);
 
+  if (count % 1000 == 0) {
+    println("backup save");
+
+    // save old sequence, just in case
+    saveImageSequence(imgs, prefix + "_tmp_");
+  }
 } // draw
 
 // draw nice pixellated image, probably somewhat computationally
@@ -699,6 +728,7 @@ void drawImage(PImage im, int x, int y, int rwd, int rht, boolean draw_grid)
 
   if (do_pixel_change || drag_mode) {
     int ind = cur_y * img.width + cur_x;
+    prev_pixel_color = img.pixels[ind];
     img.pixels[ind] = colors[last_color_index]; 
     img.updatePixels();
     do_pixel_change = false;
