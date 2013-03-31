@@ -564,12 +564,14 @@ boolean floodFill(
 ///////////////////////////////////////////////////////////////////////////////
 void draw() {
 
-  if ((keys_pressed.size() > 10) || (count - last_key_count > 100)) {
+  if ((keys_pressed.size() > 10) || 
+      ((keys_pressed.size() > 0) && (count - last_key_count > 100))) {
     keys_pressed.remove(0);
     last_key_count = count;
   }
  
   /// update stuff
+  if (imgs.size() > 0) {
   if (add_frame) {
 
     PImage temp = img.get(0, 0, img.width, img.height);
@@ -595,6 +597,9 @@ void draw() {
       img = (PImage)imgs.get(imgs_ind); // should get temp right back
       //println("advanced frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
       next_frame = false;
+  }
+  } else {
+    println("imgs wasn't initialized properly?");
   }
 
   if (do_shift) {
@@ -700,6 +705,11 @@ void draw() {
   int w = img.width * sc;
   int h = img.height * sc;
   for (int i = 0; i < 5; i++) {
+    if ((i == 0) && (imgs.size() < 5)) continue; 
+    if ((i == 4) && (imgs.size() < 4)) continue; 
+    if ((i == 1) && (imgs.size() < 3)) continue; 
+    if ((i == 3) && (imgs.size() < 2)) continue; 
+    
     int real_ind = imgs_ind + (i - 2);
     real_ind = (real_ind + imgs.size()) % imgs.size();
 
@@ -715,17 +725,20 @@ void draw() {
     drawImage((PImage)imgs.get(real_ind), x, y, sc, sc, false);
   }
 
+  // draw animation preview 
+  {
   // slow down animation
   if (count % 7 == 0) {
     anim_ind++;
   }
   count++;
   anim_ind %= imgs.size();
-  int y = 5 * (h + 5) + 10; //height - img.height * sc - 10;
+  int y = 5 * (h + 5) + 26; //height - img.height * sc - 10;
   fill(100);
   stroke(155);
   rect(x-1, y-1, w+1, h+1);
   drawImage((PImage)imgs.get(anim_ind), x, y, sc, sc, false);
+  }
 
   if (count % 1000 == 0) {
     println("backup save");
