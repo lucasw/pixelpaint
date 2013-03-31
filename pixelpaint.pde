@@ -196,7 +196,7 @@ void setup() {
     // TBD make ability to set this?
     Date d = new Date();
     long ts = d.getTime();
-    prefix = "imageseq_" + ts;
+    prefix = "data/pixelpaint_" + ts;
   }
 
   println(str(args.length) + " arguments");
