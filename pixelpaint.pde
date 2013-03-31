@@ -60,6 +60,8 @@ color prev_pixel_color;
 
 PFont font;
 
+int count = 0;
+int anim_ind = 0;
 
 void loadPalette(String paletteFilePath) {
   // Assumes it it loading a text file that has list of hex color values.
@@ -100,8 +102,8 @@ void setupPaletteFromImage(PImage img) {
     String value = hex(img.pixels[i]);
 
     Integer n =  (Integer)(colormap.get(value));
-    int count = (n != null? n.intValue() + 1 : 1);
-    colormap.put(value, count); 
+    int num = (n != null? n.intValue() + 1 : 1);
+    colormap.put(value, num); 
   }
 
 
@@ -297,7 +299,16 @@ boolean do_pixel_change = false;
 boolean do_flood_fill = false;
 // Use vi-style navigation j/k = down/up, h/l for left/right
 
+ArrayList keys_pressed = new ArrayList();
+int last_key_count = 0;
+
 void keyPressed() {
+
+  {
+    Character c = key;
+    keys_pressed.add(c);
+    last_key_count = count;
+  }
 
   // movement keys
   if (key == 'j') {
@@ -386,14 +397,7 @@ void keyPressed() {
     saveImageSequence(imgs, prefix);
   } 
 
-  // put last typed key on screen, TBD print multiple keys
-  noStroke();
-  textFont(font);
-  textSize(32);
-  fill(255);
-  text(key, width - 128, height - 72);  
-
-
+  
   // arrow keys shift image around
   if (key == CODED) {
     if (keyCode == UP) {
@@ -556,12 +560,14 @@ boolean floodFill(
   return true;
 }
 
-int count = 0;
-int anim_ind = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 void draw() {
 
+  if ((keys_pressed.size() > 10) || (count - last_key_count > 100)) {
+    keys_pressed.remove(0);
+    last_key_count = count;
+  }
  
   /// update stuff
   if (add_frame) {
@@ -621,8 +627,18 @@ void draw() {
     do_shift = false;
   } // do_shift
 
+  /////////////////////////////////////////////////////////////
   /////// draw stuff
   background(32);
+
+  // put last typed key on screen, TBD print multiple keys
+  noStroke();
+  textFont(font);
+  textSize(32);
+  fill(255);
+  for (int i = 0; i < keys_pressed.size(); i++) {
+    text( ((Character)keys_pressed.get(i)).charValue(), width - 250 + i*20, height - 64);  
+  }
 
   int rwd = cwd / img.width;
   int rht = cht / img.height;
@@ -632,7 +648,7 @@ void draw() {
   for (int i = 0; i < keys.length; i++) {  
     
     int x = cwd + 256 + (i % 4)*(rwd*2 + 6);
-    int y = 64 + (i/4)*rht*5;
+    int y = 16 + (i/4)*rht*5;
 
     if (i == last_color_index) {
       stroke(220);
