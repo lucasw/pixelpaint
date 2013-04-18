@@ -39,10 +39,15 @@ BufferedReader reader;
 
 boolean palette_select_draws_mode = true;
 boolean drag_mode = false;
+boolean mouse_mode = false;
 boolean draw_grid = true;
 boolean add_frame = false;
 boolean next_frame = false;
 boolean prev_frame = false;
+
+boolean do_voxels = true;
+PGraphics vox_view;
+float vox_rot = 0;
 
 int cur_x;
 int cur_y;
@@ -63,6 +68,9 @@ PFont font;
 int count = 0;
 int anim_ind = 0;
 
+/**
+  *
+  */
 void loadPalette(String paletteFilePath) {
   // Assumes it it loading a text file that has list of hex color values.
   //http://processing.org/reference/BufferedReader.html
@@ -82,7 +90,9 @@ void loadPalette(String paletteFilePath) {
   
 }
 
-// http://processing.org/reference/selectInput_.html
+/**
+  * http://processing.org/reference/selectInput_.html
+  */
 void paletteFileSelected(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
@@ -92,6 +102,9 @@ void paletteFileSelected(File selection) {
   }
 }
 
+/**
+  *
+  */
 void setupPaletteFromImage(PImage img) {
   
   HashMap colormap = new HashMap();
@@ -126,6 +139,9 @@ void setupPaletteFromImage(PImage img) {
   }
 }
 
+/**
+  *
+  */
 void loadNewImage(String image_file, PImage img) {
   println("attempting to load " + image_file);
   img = loadImage(image_file);  // TBD pass in or return PImage instead
@@ -134,6 +150,9 @@ void loadNewImage(String image_file, PImage img) {
   setupPaletteFromImage(img);
 }
 
+/**
+  *
+  */
 void imageFileSelected(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
@@ -143,6 +162,9 @@ void imageFileSelected(File selection) {
   }
 }
 
+/**
+  *
+  */
 String saveImage(PImage img) {
 
   //PImage partialSave = get(0,0,cwd,cht);
@@ -157,6 +179,9 @@ String saveImage(PImage img) {
 
 int save_count = 0;
 
+/**
+  *
+  */
 void saveImageSequence(ArrayList imgs, String prefix) {
 
   for (int i = 0; i < imgs.size(); i++) {
@@ -170,7 +195,9 @@ void saveImageSequence(ArrayList imgs, String prefix) {
   save_count++;
 }
 
-// setup the image that shows transparency
+/**
+  * setup the image that shows transparency
+  */
 void setupBackgroundImage() {
   
   bg.loadPixels();
@@ -190,9 +217,28 @@ void setupBackgroundImage() {
   bg.updatePixels();
 }
 
+/**
+  * Set the resolution
+  * Create and initialize variables
+  *
+  */
 void setup() {
 
-  size(cwd *1920/1080, cht);
+  if (do_voxels) {
+    size(cwd *1920/1080, cht, P2D);
+    vox_view = createGraphics(128, 128, P3D);
+    // TBD this doesn't seem to work
+    //vox_view.ortho();
+    float fov = PI/6;
+    // this doesn't look like it is working either
+    float cameraZ = (vox_view.height/2.0) / tan(fov/2.0);
+    vox_view.perspective(fov, 
+        float(vox_view.width)/float(vox_view.height), 
+        cameraZ/10.0, cameraZ*10.0);
+    vox_view.ambientLight(255,255,250);
+  } else {
+    size(cwd *1920/1080, cht);
+  }
 
   {
     // TBD make ability to set this?
@@ -353,6 +399,11 @@ void keyPressed() {
   if (key == ';') {
     drag_mode = !drag_mode;
     println("drag_mode " + str(drag_mode));
+  }
+  
+  if (key == '\'') {
+    mouse_mode = !mouse_mode;
+    println("drag_mode " + str(mouse_mode));
   }
   
   if (key == '/') {
@@ -632,6 +683,28 @@ void draw() {
     do_shift = false;
   } // do_shift
 
+  final int rwd = cwd / img.width;
+  final int rht = cht / img.height;
+
+  if (mouse_mode) {
+    cur_x = (mouseX - rwd/4)/rwd;
+    cur_y = (mouseY - rht/4)/rht;
+
+    if (cur_x >= img.width)  cur_x = img.width - 1;
+    if (cur_y >= img.height) cur_y = img.height - 1;
+    if (cur_x < 0)  cur_x = 0;
+    if (cur_y < 0)  cur_y = 0;
+    println(str(mouseX) + " " + str(mouseY) + " " + str(cur_x) + " " + str(cur_y));
+
+    if (mousePressed && (mouseButton == LEFT)) {
+      do_pixel_change = true;
+    }
+    if (mousePressed && (mouseButton == RIGHT)) {
+      //do_pixel_change = true;
+      // TBD use a different secondary color
+    }
+  }
+
   /////////////////////////////////////////////////////////////
   /////// draw stuff
   background(32);
@@ -645,8 +718,6 @@ void draw() {
     text( ((Character)keys_pressed.get(i)).charValue(), width - 250 + i*20, height - 64);  
   }
 
-  int rwd = cwd / img.width;
-  int rht = cht / img.height;
 
   // draw all the colors and keys
   textFont(font);
@@ -689,6 +760,7 @@ void draw() {
   // lay down the background that shows where the image is transparent
   image(bg, 0, 0, cwd, cwd);
 
+  // daw the main image 
   drawImage(img, 0, 0, rwd, rht, draw_grid);
 
   // draw the cursor
@@ -746,13 +818,49 @@ void draw() {
     // save old sequence, just in case
     saveImageSequence(imgs, prefix + "_tmp_");
   }
+
+  // draw voxels
+  vox_rot += 0.025;
+  final int vsc = 10;
+  vox_view.beginDraw();
+  vox_view.background(0);
+  vox_view.noStroke();
+  vox_view.pushMatrix();
+  vox_view.translate(vox_view.width/2, vox_view.height/2, 
+      -vox_view.width - 50 - imgs.size()/2*vsc );
+
+  vox_view.rotateY(vox_rot);
+  for (int k = 0; k < imgs.size(); k++) {
+    PImage im = (PImage)imgs.get(k);
+    vox_view.translate( 0, 0, vsc );
+
+  for (int j = 0; j < im.height; j++) {
+    for (int i = 0; i < im.width; i++) {
+
+      final int ind = j * img.width + i;
+      // don't draw transparent pixels
+      if ((int)alpha(im.pixels[ind]) != 0) { 
+        vox_view.pushMatrix();
+        vox_view.translate( (i - im.width / 2) * vsc, (j - im.height / 2) * vsc, 0 );
+        vox_view.fill(im.pixels[ind]);
+        vox_view.box(10);
+        vox_view.popMatrix();
+      }
+
+    }}
+  }
+  vox_view.popMatrix();
+  vox_view.endDraw();
+
+  image(vox_view, 10, 10);
 } // draw
 
 // draw nice pixellated image, probably somewhat computationally
 // expensive.
-void drawImage(PImage im, int x, int y, int rwd, int rht, boolean draw_grid)
+void drawImage(PImage im, int x_off, int y_off, int rwd, int rht, boolean draw_grid)
 {
   /// draw the edited image
+  // TBD rename img to im?
   img.loadPixels(); 
 
   if (do_pixel_change || drag_mode) {
@@ -784,16 +892,17 @@ void drawImage(PImage im, int x, int y, int rwd, int rht, boolean draw_grid)
       int ind = j * im.width + i;
       //stroke(255);
 
-      
+      // only draw if not transparent      
       if ((int)alpha(im.pixels[ind]) != 0) { 
         // draw normal pixel
         // TBD make stroke toggleable
         fill(im.pixels[ind]);
-        rect(x + i * rwd , y + j * rht , rwd, rht);
+        rect(x_off + i * rwd , y_off + j * rht , rwd, rht);
       }
 
 
     }
 
   }
+
 }
