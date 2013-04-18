@@ -45,7 +45,7 @@ boolean add_frame = false;
 boolean next_frame = false;
 boolean prev_frame = false;
 
-boolean do_voxels = true;
+boolean do_voxels = true; //true;
 PGraphics vox_view;
 float vox_rot = 0;
 
@@ -279,7 +279,7 @@ void setup() {
   imgs = new ArrayList();
   imgs.add(img);
 
-  font = createFont("Courier 10 Pitch", 8, false);
+  font = createFont("Courier 10 Pitch", 16, false);
 
   cur_x = img.width/2;
   cur_y = img.height/2;
@@ -686,6 +686,9 @@ void draw() {
   final int rwd = cwd / img.width;
   final int rht = cht / img.height;
 
+  // TBD make a queue of changed pixels and update them in one go to increase
+  // responsitivity?  The frame rate of the drawing of the image shouldn't
+  // limit drawing speed.
   if (mouse_mode) {
     cur_x = (mouseX - rwd/4)/rwd;
     cur_y = (mouseY - rht/4)/rht;
@@ -694,7 +697,7 @@ void draw() {
     if (cur_y >= img.height) cur_y = img.height - 1;
     if (cur_x < 0)  cur_x = 0;
     if (cur_y < 0)  cur_y = 0;
-    println(str(mouseX) + " " + str(mouseY) + " " + str(cur_x) + " " + str(cur_y));
+    //println(str(mouseX) + " " + str(mouseY) + " " + str(cur_x) + " " + str(cur_y));
 
     if (mousePressed && (mouseButton == LEFT)) {
       do_pixel_change = true;
@@ -793,6 +796,8 @@ void draw() {
       stroke(255);
     }
     rect(x-1, y-1, w+1, h+1);
+
+    text(str(real_ind), x + w + 5, y + h-10);
     //println(str(real_ind) + " " + str(imgs.size()) );
     drawImage((PImage)imgs.get(real_ind), x, y, sc, sc, false);
   }
@@ -820,39 +825,45 @@ void draw() {
   }
 
   // draw voxels
-  vox_rot += 0.025;
-  final int vsc = 10;
-  vox_view.beginDraw();
-  vox_view.background(0);
-  vox_view.noStroke();
-  vox_view.pushMatrix();
-  vox_view.translate(vox_view.width/2, vox_view.height/2, 
-      -vox_view.width - 50 - imgs.size()/2*vsc );
+  if (do_voxels) {
+    vox_rot += 0.025;
+    final int vsc = 10;
+    vox_view.beginDraw();
+    vox_view.background(0);
+    if (draw_grid) {
+      vox_view.stroke(50);
+    } else {
+      vox_view.noStroke();
+    }
+    vox_view.pushMatrix();
+    vox_view.translate(vox_view.width/2, vox_view.height/2, 
+        -vox_view.width - 50 - imgs.size()/2*vsc );
 
-  vox_view.rotateY(vox_rot);
-  for (int k = 0; k < imgs.size(); k++) {
-    PImage im = (PImage)imgs.get(k);
-    vox_view.translate( 0, 0, vsc );
+    vox_view.rotateY(vox_rot);
+    for (int k = 0; k < imgs.size(); k++) {
+      PImage im = (PImage)imgs.get(k);
+      vox_view.translate( 0, 0, vsc );
 
-  for (int j = 0; j < im.height; j++) {
-    for (int i = 0; i < im.width; i++) {
+      for (int j = 0; j < im.height; j++) {
+        for (int i = 0; i < im.width; i++) {
 
-      final int ind = j * img.width + i;
-      // don't draw transparent pixels
-      if ((int)alpha(im.pixels[ind]) != 0) { 
-        vox_view.pushMatrix();
-        vox_view.translate( (i - im.width / 2) * vsc, (j - im.height / 2) * vsc, 0 );
-        vox_view.fill(im.pixels[ind]);
-        vox_view.box(10);
-        vox_view.popMatrix();
-      }
+          final int ind = j * img.width + i;
+          // don't draw transparent pixels
+          if ((int)alpha(im.pixels[ind]) != 0) { 
+            vox_view.pushMatrix();
+            vox_view.translate( (i - im.width / 2) * vsc, (j - im.height / 2) * vsc, 0 );
+            vox_view.fill(im.pixels[ind]);
+            vox_view.box(10);
+            vox_view.popMatrix();
+          }
 
-    }}
+        }}
+    }
+    vox_view.popMatrix();
+    vox_view.endDraw();
+
+    image(vox_view, 10, 10);
   }
-  vox_view.popMatrix();
-  vox_view.endDraw();
-
-  image(vox_view, 10, 10);
 } // draw
 
 // draw nice pixellated image, probably somewhat computationally
