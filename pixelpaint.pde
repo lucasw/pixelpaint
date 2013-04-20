@@ -281,7 +281,7 @@ void setup() {
   imgs = new ArrayList();
   imgs.add(img);
 
-  font = createFont("Courier 10 Pitch", 16, false);
+  font = createFont("Courier 10 Pitch", 32, false);
 
   cur_x = img.width/2;
   cur_y = img.height/2;
@@ -754,8 +754,8 @@ void draw() {
   textFont(font);
   for (int i = 0; i < keys.length; i++) {  
     
-    int x = cwd + 256 + (i % 4)*(rwd*2 + 6);
-    int y = 16 + (i/4)*rht*5;
+    int x = cwd + 140 + (i % 4) * (rwd * 2 + 6);
+    int y = 290 + (i / 4) * rht * 3;
 
     if (i == last_color_index) {
       stroke(220);
@@ -764,18 +764,19 @@ void draw() {
     }
 
     fill(0); 
-    rect(x - 2, y - 2, rwd*2 + 4, rht*4 + 4);
+    rect(x - 2, y - 2, rwd*2 + 4, rht*2 + 4);
     
     // TBD check if transparent color and draw checkers
     fill(colors[i]); 
     rect(x, y, rwd*2, rht*2);
 
-    fill(230); 
-    //textSize(38);
-    //text(keys[i], x + rwd/2 - 2, y + rht*3+4 + 1);  
-    //fill(colors[i]); 
     textSize(32);
-    text(keys[i], x + rwd/2, y + rht*3+4);  
+    fill(24); 
+    text(keys[i], x + rwd/2 - 2, y + rht * 1 + 6);  
+    //text(keys[i], x + rwd/2 + 2, y + rht * 1 + 6);  
+    textSize(32);
+    fill(230); 
+    text(keys[i], x + rwd/2, y + rht * 1 + 7);  
 
     // TBD print out tally of how many pixels in image use this color
   }
@@ -783,6 +784,7 @@ void draw() {
   text("frame " + str(imgs_ind + 1) + "/" + imgs.size(), 
       width - 256, height - 32);
 
+  fill(230); 
   // print current location
   text("x " + str(cur_x), width - 128, height - 128);   
   text("y " + str(cur_y), width - 128, height - 100);   
@@ -823,7 +825,7 @@ void draw() {
     if (i == 2) {
       stroke(255);
     }
-    rect(x-1, y-1, w+1, h+1);
+    rect(x - 1, y - 1, w + 1, h + 1);
 
     text(str(real_ind), x + w + 5, y + h-10);
     //println(str(real_ind) + " " + str(imgs.size()) );
@@ -891,7 +893,7 @@ void draw() {
     vox_view.popMatrix();
     vox_view.endDraw();
 
-    image(vox_view, cwd + w + 10, 10);
+    image(vox_view, cwd + w + 50, 10);
   }
 } // draw
 
