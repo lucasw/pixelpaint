@@ -42,12 +42,14 @@ boolean drag_mode = false;
 boolean mouse_mode = false;
 boolean draw_grid = true;
 boolean add_frame = false;
+boolean clear_frame = false;
 boolean next_frame = false;
 boolean prev_frame = false;
 
 boolean do_voxels = true; //true;
 PGraphics vox_view;
-float vox_rot = 0;
+float vox_rot_y = 0;
+float vox_rot_x = 0;
 
 int cur_x;
 int cur_y;
@@ -226,7 +228,7 @@ void setup() {
 
   if (do_voxels) {
     size(cwd *1920/1080, cht, P2D);
-    vox_view = createGraphics(128, 128, P3D);
+    vox_view = createGraphics(256, 256, P3D);
     // TBD this doesn't seem to work
     //vox_view.ortho();
     float fov = PI/6;
@@ -338,6 +340,8 @@ void setupPaletteDefault() {
 }
 
 
+int old_mouse_x;
+int old_mouse_y;
 int shift_x = 0;
 int shift_y = 0;
 boolean do_shift = false;
@@ -357,6 +361,9 @@ void keyPressed() {
   }
 
   // movement keys
+  // TBD don't modify the cur_x/y directly here, just record that
+  // the motion was requested and update cur_xy in draw- then no pixels will
+  // be missed
   if (key == 'j') {
     cur_y += 1;
   } 
@@ -424,6 +431,11 @@ void keyPressed() {
     selectInput("Select an image file to edit:", "imageFileSelected");
   }
 
+  if (key == '-') {
+    // add frame to sequence
+    clear_frame = true;
+  }
+ 
   // animation
   if (key == '0') {
     // add frame to sequence
@@ -634,6 +646,14 @@ void draw() {
     add_frame = false;
   }
 
+  if (clear_frame) {
+    println("clearing frame");
+    PImage temp = createImage(img.width, img.height, ARGB);
+    img = temp;
+    imgs.set(imgs_ind, img);   
+    clear_frame = false;
+  }
+
   if (prev_frame) {
       // go to previous frame in sequence
       imgs_ind -= 1;
@@ -706,6 +726,14 @@ void draw() {
       //do_pixel_change = true;
       // TBD use a different secondary color
     }
+  } else if (do_voxels) {
+    final int dx = mouseX - old_mouse_x;
+    final int dy = mouseY - old_mouse_y;
+    old_mouse_x = mouseX;
+    old_mouse_y = mouseY;
+
+    vox_rot_y += (float)dx/50.0;
+    vox_rot_x += (float)dy/50.0;
   }
 
   /////////////////////////////////////////////////////////////
@@ -826,7 +854,7 @@ void draw() {
 
   // draw voxels
   if (do_voxels) {
-    vox_rot += 0.025;
+    //vox_rot += 0.025;
     final int vsc = 10;
     vox_view.beginDraw();
     vox_view.background(0);
@@ -839,7 +867,8 @@ void draw() {
     vox_view.translate(vox_view.width/2, vox_view.height/2, 
         -vox_view.width - 50 - imgs.size()/2*vsc );
 
-    vox_view.rotateY(vox_rot);
+    vox_view.rotateY(vox_rot_y);
+    vox_view.rotateX(vox_rot_x);
     for (int k = 0; k < imgs.size(); k++) {
       PImage im = (PImage)imgs.get(k);
       vox_view.translate( 0, 0, vsc );
@@ -862,7 +891,7 @@ void draw() {
     vox_view.popMatrix();
     vox_view.endDraw();
 
-    image(vox_view, 10, 10);
+    image(vox_view, cwd + w + 10, 10);
   }
 } // draw
 
