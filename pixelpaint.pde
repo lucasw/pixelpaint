@@ -50,6 +50,7 @@ boolean do_voxels = true; //true;
 PGraphics vox_view;
 float vox_rot_y = 0;
 float vox_rot_x = 0;
+float vox_z = 64;
 
 int cur_x;
 int cur_y;
@@ -227,8 +228,8 @@ void setupBackgroundImage() {
 void setup() {
 
   if (do_voxels) {
-    size(cwd *1920/1080, cht, P2D);
-    vox_view = createGraphics(256, 256, P3D);
+    size(cwd * 1920/1080, cht, P2D);
+    vox_view = createGraphics(320, 320, P3D);
     // TBD this doesn't seem to work
     //vox_view.ortho();
     float fov = PI/6;
@@ -237,9 +238,9 @@ void setup() {
     vox_view.perspective(fov, 
         float(vox_view.width)/float(vox_view.height), 
         cameraZ/10.0, cameraZ*10.0);
-    vox_view.ambientLight(255,255,250);
+    vox_view.ambientLight(255, 255, 250);
   } else {
-    size(cwd *1920/1080, cht);
+    size(cwd * 1920/1080, cht);
   }
 
   {
@@ -366,36 +367,44 @@ void keyPressed() {
   // be missed
   if (key == 'j') {
     cur_y += 1;
+    mouse_mode = false;
   } 
 
   if (key == 'k') {
     cur_y -= 1;
+    mouse_mode = false;
   } 
 
   if (key == 'h') {
     cur_x -= 1;
+    mouse_mode = false;
   } 
 
   if (key == 'l') {
     cur_x += 1;
+    mouse_mode = false;
   } 
   
   // diagonal keys (not used in vi but standard in roguelikes?)
   if (key == 'y') {
     cur_y -= 1;
     cur_x -= 1;
+    mouse_mode = false;
   } 
   if (key == 'u') {
     cur_y -= 1;
     cur_x += 1;
+    mouse_mode = false;
   }
   if (key == 'b') {
     cur_y += 1;
     cur_x -= 1;
+    mouse_mode = false;
   }
   if (key == 'n') {
     cur_y += 1;
     cur_x += 1;
+    mouse_mode = false;
   }
 
   cur_x = (cur_x + img.width) % img.width;
@@ -449,9 +458,18 @@ void keyPressed() {
   
   if (key == '8') {
     prev_frame = true;
-
-    
   }
+
+  if (key == '[') {
+    vox_z += 4;
+    println("vox_z " + str(vox_z));
+  }
+  
+  if (key == ']') {
+    vox_z -= 5;
+    println("vox_z " + str(vox_z));
+  }
+
 
   /////////////////////////
   if (key == 'p') {
@@ -755,7 +773,7 @@ void draw() {
   for (int i = 0; i < keys.length; i++) {  
     
     int x = cwd + 140 + (i % 4) * (rwd * 2 + 6);
-    int y = 290 + (i / 4) * rht * 3;
+    int y = vox_view.height + 40 + (i / 4) * rht * 2;
 
     if (i == last_color_index) {
       stroke(220);
@@ -764,11 +782,11 @@ void draw() {
     }
 
     fill(0); 
-    rect(x - 2, y - 2, rwd*2 + 4, rht*2 + 4);
+    rect(x - 2, y - 2, rwd * 2 + 4, rht * 2 + 4);
     
     // TBD check if transparent color and draw checkers
     fill(colors[i]); 
-    rect(x, y, rwd*2, rht*2);
+    rect(x, y, rwd * 2, rht * 2);
 
     textSize(32);
     fill(24); 
@@ -860,20 +878,29 @@ void draw() {
     final int vsc = 10;
     vox_view.beginDraw();
     vox_view.background(0);
-    if (draw_grid) {
-      vox_view.stroke(50);
-    } else {
+    if (!draw_grid) {
       vox_view.noStroke();
     }
     vox_view.pushMatrix();
-    vox_view.translate(vox_view.width/2, vox_view.height/2, 
-        -vox_view.width - 50 - imgs.size()/2*vsc );
+    vox_view.translate(
+        vox_view.width/2, vox_view.height/2, 
+        -vox_z );
 
     vox_view.rotateY(vox_rot_y);
     vox_view.rotateX(vox_rot_x);
+    vox_view.translate( 0, 0, -vsc*imgs.size()/2 );
+
     for (int k = 0; k < imgs.size(); k++) {
       PImage im = (PImage)imgs.get(k);
       vox_view.translate( 0, 0, vsc );
+
+      if (draw_grid) {
+        if (k == imgs_ind) {
+          vox_view.stroke(240);
+        } else {
+          vox_view.stroke(24);
+        }
+      }
 
       for (int j = 0; j < im.height; j++) {
         for (int i = 0; i < im.width; i++) {
