@@ -886,31 +886,44 @@ void draw() {
         vox_view.width/2, vox_view.height/2, 
         -vox_z );
 
-    vox_view.rotateY(vox_rot_y);
     vox_view.rotateX(vox_rot_x);
+    vox_view.rotateY(vox_rot_y);
     vox_view.translate( 0, 0, -vsc*imgs.size()/2 );
 
     for (int k = 0; k < imgs.size(); k++) {
       PImage im = (PImage)imgs.get(k);
       vox_view.translate( 0, 0, vsc );
 
-      if (draw_grid) {
-        if (k == imgs_ind) {
-          vox_view.stroke(240);
-        } else {
-          vox_view.stroke(24);
-        }
-      }
-
       for (int j = 0; j < im.height; j++) {
         for (int i = 0; i < im.width; i++) {
+         
+          boolean is_cursor = false;
+          // highlight the voxel the cursor is on
+          if ((k == imgs_ind) && (j == cur_y) && (i == cur_x))  {
+            is_cursor = true;
+            vox_view.stroke(255); 
+          } else {
+            // highlight the plane currently being edited
+            if (draw_grid) {
+              if (k == imgs_ind) {
+                vox_view.stroke(130);
+              } else {
+                vox_view.stroke(24);
+              }
+            }
+          }
 
           final int ind = j * img.width + i;
           // don't draw transparent pixels
-          if ((int)alpha(im.pixels[ind]) != 0) { 
+          if (((int)alpha(im.pixels[ind]) != 0) || is_cursor) { 
             vox_view.pushMatrix();
             vox_view.translate( (i - im.width / 2) * vsc, (j - im.height / 2) * vsc, 0 );
-            vox_view.fill(im.pixels[ind]);
+            if (is_cursor && ((int)alpha(im.pixels[ind]) == 0)) {
+              // draw a wireframe box even if the pixel under the cursor is transparent 
+              vox_view.noFill();
+            } else {
+              vox_view.fill(im.pixels[ind]);
+            }
             vox_view.box(10);
             vox_view.popMatrix();
           }
