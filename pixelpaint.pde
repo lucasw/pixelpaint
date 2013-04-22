@@ -754,6 +754,31 @@ void draw() {
     vox_rot_x += (float)dy/50.0;
   }
 
+  ///
+  //
+  //
+
+  // update the image
+  {
+    img.loadPixels();
+    if (do_pixel_change || drag_mode) {
+      int ind = cur_y * img.width + cur_x;
+      prev_pixel_color = img.pixels[ind];
+      img.pixels[ind] = colors[last_color_index]; 
+      img.updatePixels();
+      do_pixel_change = false;
+    }
+
+    if (do_flood_fill) {
+      int ind = cur_y * img.width + cur_x;
+      color color_to_replace = img.pixels[ind];
+      color color_to_flood = colors[last_color_index]; 
+      floodFill(img, cur_x, cur_y, color_to_replace, color_to_flood); 
+      img.updatePixels();
+      do_flood_fill = false;
+    }
+  }
+
   /////////////////////////////////////////////////////////////
   /////// draw stuff
   background(32);
@@ -811,8 +836,21 @@ void draw() {
   // lay down the background that shows where the image is transparent
   image(bg, 0, 0, cwd, cwd);
 
+  // daw the a faint image of the previous frame under the current frame 
+  // (TBD make toggleable)
+  if (imgs_ind > 1) {
+    drawImage((PImage)imgs.get(imgs_ind - 2), 0, 0, rwd, rht, draw_grid, 0.25);
+  }
+  if (imgs_ind > 0) {
+    drawImage((PImage)imgs.get(imgs_ind - 1), 0, 0, rwd, rht, draw_grid, 0.5);
+  }
+  // draw 1 frame forward in the sequence too
+  if (imgs_ind < imgs.size() - 1 ) {
+    drawImage((PImage)imgs.get(imgs_ind + 1), 0, 0, rwd, rht, draw_grid, 0.1);
+  }
+
   // daw the main image 
-  drawImage(img, 0, 0, rwd, rht, draw_grid);
+  drawImage(img, 0, 0, rwd, rht, draw_grid, 1.0);
 
   // draw the cursor
   {
@@ -937,30 +975,20 @@ void draw() {
   }
 } // draw
 
-// draw nice pixellated image, probably somewhat computationally
 // expensive.
 void drawImage(PImage im, int x_off, int y_off, int rwd, int rht, boolean draw_grid)
 {
+  drawImage(im, x_off, y_off, rwd, rht, draw_grid, 1.0);
+}
+
+// draw nice pixellated image, probably somewhat computationally
+// expensive.
+void drawImage(PImage im, int x_off, int y_off, int rwd, int rht, boolean draw_grid,
+  float modifier)
+{
   /// draw the edited image
   // TBD rename img to im?
-  img.loadPixels(); 
-
-  if (do_pixel_change || drag_mode) {
-    int ind = cur_y * img.width + cur_x;
-    prev_pixel_color = img.pixels[ind];
-    img.pixels[ind] = colors[last_color_index]; 
-    img.updatePixels();
-    do_pixel_change = false;
-  }
-
-  if (do_flood_fill) {
-    int ind = cur_y * img.width + cur_x;
-    color color_to_replace = img.pixels[ind];
-    color color_to_flood = colors[last_color_index]; 
-    floodFill(img, cur_x, cur_y, color_to_replace, color_to_flood); 
-    img.updatePixels();
-    do_flood_fill = false;
-  }
+  im.loadPixels(); 
 
   if (draw_grid) {
     strokeWeight(1.0);
@@ -978,7 +1006,7 @@ void drawImage(PImage im, int x_off, int y_off, int rwd, int rht, boolean draw_g
       if ((int)alpha(im.pixels[ind]) != 0) { 
         // draw normal pixel
         // TBD make stroke toggleable
-        fill(im.pixels[ind]);
+        fill(im.pixels[ind], modifier*255);
         rect(x_off + i * rwd , y_off + j * rht , rwd, rht);
       }
 
