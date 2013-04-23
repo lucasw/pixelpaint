@@ -46,7 +46,8 @@ boolean clear_frame = false;
 boolean next_frame = false;
 boolean prev_frame = false;
 
-boolean do_voxels = true; //true;
+boolean do_voxels = false;
+final int vox_view_height = 320;
 PGraphics vox_view;
 float vox_rot_y = 0;
 float vox_rot_x = 0;
@@ -229,7 +230,7 @@ void setup() {
 
   if (do_voxels) {
     size(cwd * 1920/1080, cht, P2D);
-    vox_view = createGraphics(320, 320, P3D);
+    vox_view = createGraphics(vox_view_height, vox_view_height, P3D);
     // TBD this doesn't seem to work
     //vox_view.ortho();
     float fov = PI/6;
@@ -263,10 +264,13 @@ void setup() {
   }
 
   if (img == null) {
-    println("creating default 32x32 empty image");
-    img = createImage(32, 32, ARGB); 
-    
-    bg = createImage(img.width * 8, img.height * 8, ARGB);
+    // TBD changing this messes up the menu drawing
+    final int sz = 32;
+    println("creating default " + str(sz) + "x" + str(sz) + " empty image");
+    img = createImage(sz, sz, ARGB); 
+   
+    // make this independent
+    bg = createImage(32 * 8, 32 * 8, ARGB);
     setupBackgroundImage();
 
     setupPaletteDefault();
@@ -798,7 +802,7 @@ void draw() {
   for (int i = 0; i < keys.length; i++) {  
     
     int x = cwd + 140 + (i % 4) * (rwd * 2 + 6);
-    int y = vox_view.height + 40 + (i / 4) * rht * 2;
+    int y = vox_view_height + 40 + (i / 4) * rht * 2;
 
     if (i == last_color_index) {
       stroke(220);
