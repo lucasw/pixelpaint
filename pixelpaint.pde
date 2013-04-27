@@ -29,6 +29,10 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
+// TBD these shouldn't be final, everytime an image is loaded these should be reset   
+final int w_sz = 16;
+final int h_sz = 128;
+
 PImage img;
 PImage bg;
 
@@ -71,6 +75,8 @@ PFont font;
 
 int count = 0;
 int anim_ind = 0;
+
+final int BSZ = 32;
 
 /**
   *
@@ -151,7 +157,8 @@ void loadNewImage(String image_file, PImage img) {
   img = loadImage(image_file);  // TBD pass in or return PImage instead
   println("loaded " + str(img.width) + "x" + str(img.height)); 
   
-  setupPaletteFromImage(img);
+  imgs.set(imgs_ind, img);   
+  //setupPaletteFromImage(img);
 }
 
 /**
@@ -265,12 +272,11 @@ void setup() {
 
   if (img == null) {
     // TBD changing this messes up the menu drawing
-    final int sz = 32;
-    println("creating default " + str(sz) + "x" + str(sz) + " empty image");
-    img = createImage(sz, sz, ARGB); 
+    println("creating default " + str(w_sz) + "x" + str(h_sz) + " empty image");
+    img = createImage(w_sz, h_sz, ARGB); 
    
     // make this independent
-    bg = createImage(32 * 8, 32 * 8, ARGB);
+    bg = createImage(BSZ * 8, BSZ * 8, ARGB);
     setupBackgroundImage();
 
     setupPaletteDefault();
@@ -286,7 +292,7 @@ void setup() {
   imgs = new ArrayList();
   imgs.add(img);
 
-  font = createFont("Courier 10 Pitch", 32, false);
+  font = createFont("Courier 10 Pitch", BSZ, false);
 
   cur_x = img.width/2;
   cur_y = img.height/2;
@@ -725,15 +731,18 @@ void draw() {
     do_shift = false;
   } // do_shift
 
-  final int rwd = cwd / img.width;
-  final int rht = cht / img.height;
+  final int rwd = cwd / BSZ;
+  final int rht = cht / BSZ;
+
+  final int rwd2 = cwd / max(img.width, img.height);
+  final int rht2 = cht / max(img.width, img.height);
 
   // TBD make a queue of changed pixels and update them in one go to increase
   // responsitivity?  The frame rate of the drawing of the image shouldn't
   // limit drawing speed.
   if (mouse_mode) {
-    cur_x = (mouseX - rwd/4)/rwd;
-    cur_y = (mouseY - rht/4)/rht;
+    cur_x = (mouseX - rwd2/4)/rwd2;
+    cur_y = (mouseY - rht2/4)/rht2;
 
     if (cur_x >= img.width)  cur_x = img.width - 1;
     if (cur_y >= img.height) cur_y = img.height - 1;
@@ -790,7 +799,7 @@ void draw() {
   // put last typed key on screen, TBD print multiple keys
   noStroke();
   textFont(font);
-  textSize(32);
+  textSize(BSZ);
   fill(255);
   for (int i = 0; i < keys_pressed.size(); i++) {
     text( ((Character)keys_pressed.get(i)).charValue(), width - 250 + i*20, height - 64);  
@@ -817,11 +826,11 @@ void draw() {
     fill(colors[i]); 
     rect(x, y, rwd * 2, rht * 2);
 
-    textSize(32);
+    textSize(BSZ);
     fill(24); 
     text(keys[i], x + rwd/2 - 2, y + rht * 1 + 6);  
     //text(keys[i], x + rwd/2 + 2, y + rht * 1 + 6);  
-    textSize(32);
+    textSize(BSZ);
     fill(230); 
     text(keys[i], x + rwd/2, y + rht * 1 + 7);  
 
@@ -829,7 +838,7 @@ void draw() {
   }
  
   text("frame " + str(imgs_ind + 1) + "/" + imgs.size(), 
-      width - 256, height - 32);
+      width - 256, height - BSZ);
 
   fill(230); 
   // print current location
@@ -838,37 +847,38 @@ void draw() {
 
 
   // lay down the background that shows where the image is transparent
-  image(bg, 0, 0, cwd, cwd);
+  image(bg, 0, 0, rwd2*img.width, rht2*img.height);
 
   // daw the a faint image of the previous frame under the current frame 
   // (TBD make toggleable)
   if (imgs_ind > 1) {
-    drawImage((PImage)imgs.get(imgs_ind - 2), 0, 0, rwd, rht, draw_grid, 0.25);
+    drawImage((PImage)imgs.get(imgs_ind - 2), 0, 0, rwd2, rht2, draw_grid, 0.25);
   }
   if (imgs_ind > 0) {
-    drawImage((PImage)imgs.get(imgs_ind - 1), 0, 0, rwd, rht, draw_grid, 0.5);
+    drawImage((PImage)imgs.get(imgs_ind - 1), 0, 0, rwd2, rht2, draw_grid, 0.5);
   }
   // draw 1 frame forward in the sequence too
   if (imgs_ind < imgs.size() - 1 ) {
-    drawImage((PImage)imgs.get(imgs_ind + 1), 0, 0, rwd, rht, draw_grid, 0.1);
+    drawImage((PImage)imgs.get(imgs_ind + 1), 0, 0, rwd2, rht2, draw_grid, 0.1);
   }
 
   // daw the main image 
-  drawImage(img, 0, 0, rwd, rht, draw_grid, 1.0);
+  drawImage(img, 0, 0, rwd2, rht2, draw_grid, 1.0);
 
   // draw the cursor
   {
   stroke(0);
   strokeWeight(2);
   fill(255); 
-  rect(cur_x * rwd + rwd/4, cur_y * rht + rht/4, rwd/2, rht/2);
+  rect(cur_x * rwd2 + rwd2/4, cur_y * rht2 + rht2/4, rwd2/2, rht2/2);
   }
 
   // draw a thumbnail of all frames in sequence
-  int sc = 3;
-  int x = cwd + 10;
-  int w = img.width * sc;
-  int h = img.height * sc;
+  final int sc = 3;
+  final int sc2 = (sc * BSZ)/max(img.width, img.height);
+  final int x = cwd + 10;
+  final int w = img.width * sc2;
+  final int h = img.height * sc2;
   for (int i = 0; i < 5; i++) {
     if ((i == 0) && (imgs.size() < 5)) continue; 
     if ((i == 4) && (imgs.size() < 4)) continue; 
@@ -889,22 +899,22 @@ void draw() {
 
     text(str(real_ind), x + w + 5, y + h-10);
     //println(str(real_ind) + " " + str(imgs.size()) );
-    drawImage((PImage)imgs.get(real_ind), x, y, sc, sc, false);
+    drawImage((PImage)imgs.get(real_ind), x, y, sc2, sc2, false);
   }
 
   // draw animation preview 
   {
-  // slow down animation
-  if (count % 7 == 0) {
-    anim_ind++;
-  }
-  count++;
-  anim_ind %= imgs.size();
-  int y = 5 * (h + 5) + 26; //height - img.height * sc - 10;
-  fill(100);
-  stroke(155);
-  rect(x-1, y-1, w+1, h+1);
-  drawImage((PImage)imgs.get(anim_ind), x, y, sc, sc, false);
+    // slow down animation
+    if (count % 7 == 0) {
+      anim_ind++;
+    }
+    count++;
+    anim_ind %= imgs.size();
+    int y = 5 * (h + 5) + 26; //height - img.height * sc - 10;
+    fill(100);
+    stroke(155);
+    rect(x-1, y-1, w+1, h+1);
+    drawImage((PImage)imgs.get(anim_ind), x, y, sc2, sc2, false);
   }
 
   if (count % 1000 == 0) {
