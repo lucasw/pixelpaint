@@ -30,8 +30,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 // TBD these shouldn't be final, everytime an image is loaded these should be reset   
-final int w_sz = 16;
-final int h_sz = 128;
+final int w_sz = 32;
+final int h_sz = 32;
 
 PImage img;
 PImage bg;
@@ -49,6 +49,7 @@ boolean add_frame = false;
 boolean clear_frame = false;
 boolean next_frame = false;
 boolean prev_frame = false;
+boolean is_dirty = false;
 
 boolean do_voxels = false;
 final int vox_view_height = 320;
@@ -780,6 +781,7 @@ void draw() {
       img.pixels[ind] = colors[last_color_index]; 
       img.updatePixels();
       do_pixel_change = false;
+      is_dirty = true;
     }
 
     if (do_flood_fill) {
@@ -789,6 +791,7 @@ void draw() {
       floodFill(img, cur_x, cur_y, color_to_replace, color_to_flood); 
       img.updatePixels();
       do_flood_fill = false;
+      is_dirty = true;
     }
   }
 
@@ -917,9 +920,9 @@ void draw() {
     drawImage((PImage)imgs.get(anim_ind), x, y, sc2, sc2, false);
   }
 
-  if (count % 1000 == 0) {
+  if ((count % 1000 == 0) && (is_dirty)) {
     println("backup save");
-
+    is_dirty = false;
     // save old sequence, just in case
     saveImageSequence(imgs, prefix + "_tmp_");
   }
