@@ -51,12 +51,14 @@ boolean next_frame = false;
 boolean prev_frame = false;
 boolean is_dirty = false;
 
-boolean do_voxels = false;
+boolean do_voxels = true;
 final int vox_view_height = 320;
 PGraphics vox_view;
 float vox_rot_y = 0;
 float vox_rot_x = 0;
 float vox_z = 64;
+boolean do_view_x = false;
+boolean do_view_y = false;
 
 int cur_x;
 int cur_y;
@@ -248,6 +250,7 @@ void setup() {
         float(vox_view.width)/float(vox_view.height), 
         cameraZ/10.0, cameraZ*10.0);
     vox_view.ambientLight(255, 255, 250);
+
   } else {
     size(cwd * 1920/1080, cht);
   }
@@ -299,6 +302,13 @@ void setup() {
   cur_y = img.height/2;
 
   setupKeysDefault();
+
+
+  if (do_voxels) {
+    for (int i = 0; i < h_sz; i++) {
+      duplicateFrame();
+    }
+  }
 }
 
 // color selection kesy
@@ -438,7 +448,8 @@ void keyPressed() {
     println("palette_select_draws_mode " + str(palette_select_draws_mode));
   }
 
-  if (key == '5') {
+
+  if (key == 'b') {
     draw_grid = !draw_grid;
     println("draw_grid " + str(draw_grid));
   }
@@ -459,9 +470,19 @@ void keyPressed() {
   // animation
   if (key == '0') {
     // add frame to sequence
-    add_frame = true;
+    if (!do_voxels) {
+      add_frame = true;
+    }
   }
-  
+
+  // rotate view
+  if (key == '5') {
+    do_view_x = true;
+  }
+  if (key == '6') {
+    do_view_y = true;
+  }
+
   if (key == '9') {
     // go to next frame in sequence
     next_frame = true;
@@ -582,6 +603,16 @@ boolean testXY(PImage img, XY xy,
   return (img.pixels[xy.y * img.width + xy.x] == color_to_replace);
 }
 
+void duplicateFrame() {
+  PImage temp = img.get(0, 0, img.width, img.height);
+    //PImage temp = createImage(img.width, img.height, ARGB);
+    imgs_ind += 1;
+    imgs.add(imgs_ind, temp); // index
+    img = (PImage)imgs.get(imgs_ind); // should get temp right back
+    //println("added frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+    
+}
+
 // try http://en.wikipedia.org/wiki/Flood_fill next
 boolean floodFill(
   PImage img, 
@@ -656,6 +687,78 @@ boolean floodFill(
 ///////////////////////////////////////////////////////////////////////////////
 void draw() {
 
+  if (do_voxels) {
+    if (do_view_x) {
+      println("rotating x");
+      ArrayList new_imgs = new ArrayList();
+      final int depth_sz = img.width;
+
+      for (int src_y = 0; src_y < depth_sz; src_y++) {
+      
+        PImage dst = createImage(img.width, img.height, ARGB);
+        dst.loadPixels();
+        for (int dst_y = 0; dst_y < dst.height && 
+            dst_y < imgs.size(); dst_y++) {
+          PImage src = (PImage)imgs.get(dst_y); // should get temp right back
+          src.loadPixels();
+
+          for (int x = 0; x < dst.width; x++) {
+
+            int src_ind = src_y * img.width + x;
+            int dst_ind = dst_y * img.width + x;
+
+            dst.pixels[dst_ind] = src.pixels[src_ind];
+          } 
+
+        }
+        dst.updatePixels();
+        new_imgs.add(dst);
+        print(new_imgs.size() + " ");
+      }
+      
+      do_view_x = false;
+      imgs = new_imgs;
+      imgs_ind = cur_y;
+      img = (PImage)imgs.get(imgs_ind);
+      println("done");
+    }
+    
+    if (do_view_y) {
+      println("rotating y");
+      ArrayList new_imgs = new ArrayList();
+      final int depth_sz = img.width;
+
+      for (int src_x = 0; src_x < depth_sz; src_x++) {
+      
+        PImage dst = createImage(img.width, img.height, ARGB);
+        dst.loadPixels();
+        for (int dst_x = 0; dst_x < dst.width && 
+            dst_x < imgs.size(); dst_x++) {
+          PImage src = (PImage)imgs.get(dst_x); // should get temp right back
+          src.loadPixels();
+
+          for (int y = 0; y < dst.height; y++) {
+
+            int src_ind = y * img.width + src_x;
+            int dst_ind = y * img.width + dst_x;
+
+            dst.pixels[dst_ind] = src.pixels[src_ind];
+          } 
+
+        }
+        dst.updatePixels();
+        new_imgs.add(dst);
+        print(new_imgs.size() + " ");
+      }
+    
+      do_view_y = false;
+      imgs = new_imgs;
+      imgs_ind = cur_y;
+      img = (PImage)imgs.get(imgs_ind);
+
+    }
+  }
+
   if ((keys_pressed.size() > 10) || 
       ((keys_pressed.size() > 0) && (count - last_key_count > 100))) {
     keys_pressed.remove(0);
@@ -665,13 +768,7 @@ void draw() {
   /// update stuff
   if (imgs.size() > 0) {
   if (add_frame) {
-
-    PImage temp = img.get(0, 0, img.width, img.height);
-    //PImage temp = createImage(img.width, img.height, ARGB);
-    imgs_ind += 1;
-    imgs.add(imgs_ind, temp); // index
-    img = (PImage)imgs.get(imgs_ind); // should get temp right back
-    //println("added frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
+    duplicateFrame();
     add_frame = false;
   }
 
