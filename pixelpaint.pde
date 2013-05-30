@@ -573,6 +573,13 @@ void keyPressed() {
     if (key == 'v') {
       colors[color_ind] = color(red(cc), green(cc), blue(cc) + 1); 
     }
+    
+    if (key == '2') {
+      colors[color_ind] = color(red(cc) - 1, green(cc) - 1, blue(cc) - 1); 
+    }
+    if (key == '4') {
+      colors[color_ind] = color(red(cc) + 1, green(cc) + 1, blue(cc) + 1); 
+    }
   } else {
     
     selectColor();
