@@ -33,10 +33,12 @@ import java.util.Map;
 final int w_sz = 32;
 final int h_sz = 32;
 
+Date dt = new Date();
+
 PImage img;
 PImage bg;
 
-ArrayList imgs;
+ArrayList imgs = new ArrayList();
 int imgs_ind = 0;
 
 BufferedReader reader;
@@ -45,13 +47,15 @@ boolean palette_select_draws_mode = true;
 boolean drag_mode = false;
 boolean mouse_mode = false;
 boolean draw_grid = true;
+boolean color_edit_mode = false;
+
 boolean add_frame = false;
 boolean clear_frame = false;
 boolean next_frame = false;
 boolean prev_frame = false;
 boolean is_dirty = false;
 
-boolean do_voxels = true;
+boolean do_voxels = false;
 final int vox_view_height = 320;
 PGraphics vox_view;
 float vox_rot_y = 0;
@@ -66,10 +70,9 @@ int cur_y;
 int cwd = 640;
 int cht = cwd;
 
-int last_color_index = 0;
-
+int color_ind = 0;
 color[] colors = new color[17];
-char[] keys = new char[17];
+char[] color_keys = new char[17];
 
 String prefix;
 color prev_pixel_color;
@@ -182,8 +185,7 @@ void imageFileSelected(File selection) {
 String saveImage(PImage img) {
 
   //PImage partialSave = get(0,0,cwd,cht);
-  Date d = new Date();
-  long ts = d.getTime();
+  long ts = dt.getTime();
   //partialSave.save("cur-" + ts + ".png");
   String name = "cur-" + ts + ".png";
   img.save(name);
@@ -257,8 +259,7 @@ void setup() {
 
   {
     // TBD make ability to set this?
-    Date d = new Date();
-    long ts = d.getTime();
+    long ts = dt.getTime();
     prefix = "data/pixelpaint_" + ts;
   }
 
@@ -293,7 +294,6 @@ void setup() {
 
     img.updatePixels();
   }
-  imgs = new ArrayList();
   imgs.add(img);
 
   font = createFont("Courier 10 Pitch", BSZ, false);
@@ -314,23 +314,23 @@ void setup() {
 // color selection kesy
 void setupKeysDefault() {
 
-  keys[0]  = '1';
-  keys[1]  = '2';
-  keys[2]  = '3';
-  keys[3]  = '4';
-  keys[4]  = 'q';
-  keys[5]  = 'w';
-  keys[6]  = 'e';
-  keys[7]  = 'r';
-  keys[8]  = 'a';
-  keys[9]  = 's';
-  keys[10] = 'd';
-  keys[11] = 'f';
-  keys[12] = 'z';
-  keys[13] = 'x';
-  keys[14] = 'c';
-  keys[15] = 'v';
-  keys[16] = 'g'; // alpha
+  color_keys[0]  = '1';
+  color_keys[1]  = '2';
+  color_keys[2]  = '3';
+  color_keys[3]  = '4';
+  color_keys[4]  = 'q';
+  color_keys[5]  = 'w';
+  color_keys[6]  = 'e';
+  color_keys[7]  = 'r';
+  color_keys[8]  = 'a';
+  color_keys[9]  = 's';
+  color_keys[10] = 'd';
+  color_keys[11] = 'f';
+  color_keys[12] = 'z';
+  color_keys[13] = 'x';
+  color_keys[14] = 'c';
+  color_keys[15] = 'v';
+  color_keys[16] = 'g'; // alpha
 
 }
 
@@ -373,6 +373,21 @@ boolean do_flood_fill = false;
 
 ArrayList keys_pressed = new ArrayList();
 int last_key_count = 0;
+
+void selectColor() {
+
+  for (int i = 0; i < color_keys.length; i++) {
+    if (key == color_keys[i]) { 
+      color_ind = i;
+      if (palette_select_draws_mode) {
+        // draw on pixel
+        do_pixel_change = true;
+      }
+    }
+  }
+
+} // selectColor
+
 
 void keyPressed() {
 
@@ -475,6 +490,10 @@ void keyPressed() {
     }
   }
 
+  if (key == 't') {
+    color_edit_mode = !color_edit_mode;
+  }
+
   // rotate view
   if (key == '5') {
     do_view_x = true;
@@ -533,14 +552,31 @@ void keyPressed() {
 
  
   ////////////////////////////////////////////////
-  // draw on pixel
-  for (int i = 0; i < keys.length; i++) {
-    if (key == keys[i]) { 
-      last_color_index = i;
-      if (palette_select_draws_mode) {
-        do_pixel_change = true;
-      }
+  if (color_edit_mode) {
+    // edit color
+    color cc = colors[color_ind];
+    if (key == 'w') {
+      colors[color_ind] = color(red(cc) - 1, green(cc), blue(cc) ); 
     }
+    if (key == 'r') {
+      colors[color_ind] = color(red(cc) + 1, green(cc), blue(cc) ); 
+    }
+    if (key == 's') {
+      colors[color_ind] = color(red(cc), green(cc) - 1, blue(cc) ); 
+    }
+    if (key == 'f') {
+      colors[color_ind] = color(red(cc), green(cc) + 1, blue(cc) ); 
+    }
+    if (key == 'x') {
+      colors[color_ind] = color(red(cc), green(cc), blue(cc) - 1); 
+    }
+    if (key == 'v') {
+      colors[color_ind] = color(red(cc), green(cc), blue(cc) + 1); 
+    }
+  } else {
+    
+    selectColor();
+
   }
  
   if ((key == ' ') || (key == 'm')) {
@@ -690,7 +726,7 @@ void draw() {
   if (do_voxels) {
     if (do_view_x) {
       println("rotating x");
-      ArrayList new_imgs = new ArrayList();
+      ArrayList rot_imgs = new ArrayList();
       final int depth_sz = img.width;
 
       for (int src_y = 0; src_y < depth_sz; src_y++) {
@@ -712,12 +748,12 @@ void draw() {
 
         }
         dst.updatePixels();
-        new_imgs.add(dst);
-        print(new_imgs.size() + " ");
+        rot_imgs.add(dst);
+        print(rot_imgs.size() + " ");
       }
       
       do_view_x = false;
-      imgs = new_imgs;
+      imgs = rot_imgs;
       imgs_ind = cur_y;
       img = (PImage)imgs.get(imgs_ind);
       println("done");
@@ -725,7 +761,7 @@ void draw() {
     
     if (do_view_y) {
       println("rotating y");
-      ArrayList new_imgs = new ArrayList();
+      ArrayList rot_imgs = new ArrayList();
       final int depth_sz = img.width;
 
       for (int src_x = 0; src_x < depth_sz; src_x++) {
@@ -747,12 +783,12 @@ void draw() {
 
         }
         dst.updatePixels();
-        new_imgs.add(dst);
-        print(new_imgs.size() + " ");
+        rot_imgs.add(dst);
+        print(rot_imgs.size() + " ");
       }
     
       do_view_y = false;
-      imgs = new_imgs;
+      imgs = rot_imgs;
       imgs_ind = cur_y;
       img = (PImage)imgs.get(imgs_ind);
 
@@ -875,7 +911,7 @@ void draw() {
     if (do_pixel_change || drag_mode) {
       int ind = cur_y * img.width + cur_x;
       prev_pixel_color = img.pixels[ind];
-      img.pixels[ind] = colors[last_color_index]; 
+      img.pixels[ind] = colors[color_ind]; 
       img.updatePixels();
       do_pixel_change = false;
       is_dirty = true;
@@ -884,7 +920,7 @@ void draw() {
     if (do_flood_fill) {
       int ind = cur_y * img.width + cur_x;
       color color_to_replace = img.pixels[ind];
-      color color_to_flood = colors[last_color_index]; 
+      color color_to_flood = colors[color_ind]; 
       floodFill(img, cur_x, cur_y, color_to_replace, color_to_flood); 
       img.updatePixels();
       do_flood_fill = false;
@@ -908,13 +944,16 @@ void draw() {
 
   // draw all the colors and keys
   textFont(font);
-  for (int i = 0; i < keys.length; i++) {  
+  for (int i = 0; i < color_keys.length; i++) {  
     
     int x = cwd + 140 + (i % 4) * (rwd * 2 + 6);
     int y = vox_view_height + 40 + (i / 4) * rht * 2;
 
-    if (i == last_color_index) {
-      stroke(220);
+    if (i == color_ind) {
+      if (color_edit_mode)
+        stroke(255);
+      else
+        stroke(180);
     } else {
       noStroke();
     }
@@ -928,11 +967,11 @@ void draw() {
 
     textSize(BSZ);
     fill(24); 
-    text(keys[i], x + rwd/2 - 2, y + rht * 1 + 6);  
+    text(color_keys[i], x + rwd/2 - 2, y + rht * 1 + 6);  
     //text(keys[i], x + rwd/2 + 2, y + rht * 1 + 6);  
     textSize(BSZ);
     fill(230); 
-    text(keys[i], x + rwd/2, y + rht * 1 + 7);  
+    text(color_keys[i], x + rwd/2, y + rht * 1 + 7);  
 
     // TBD print out tally of how many pixels in image use this color
   }
