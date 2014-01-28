@@ -165,14 +165,15 @@ void loadNewImage(String image_file, PImage img) {
     println("bad image " + image_file + ", returning");
     return;
   }
-  println("loaded " + str(img.width) + "x" + str(img.height)); 
+  println("loaded " + str(img.width) + "x" + str(img.height) + " " + str(imgs_ind)); 
   
   imgs.set(imgs_ind, img);   
   //setupPaletteFromImage(img);
+  
 }
 
 /**
-  *
+  * selectInput is connected to this with 'o' key
   */
 void imageFileSelected(File selection) {
   if (selection == null) {
@@ -730,13 +731,8 @@ boolean floodFill(
   return true;
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-void draw() {
-
-  if (do_voxels) {
-    if (do_view_x) {
-      println("rotating x");
+void drawVoxelsViewX() {
+  println("rotating x");
       ArrayList rot_imgs = new ArrayList();
       final int depth_sz = img.width;
 
@@ -768,10 +764,11 @@ void draw() {
       imgs_ind = cur_y;
       img = (PImage)imgs.get(imgs_ind);
       println("done");
-    }
-    
-    if (do_view_y) {
-      println("rotating y");
+
+} // voxels view x
+
+void drawVoxelsViewY() {
+   println("rotating y");
       ArrayList rot_imgs = new ArrayList();
       final int depth_sz = img.width;
 
@@ -803,8 +800,21 @@ void draw() {
       imgs_ind = cur_y;
       img = (PImage)imgs.get(imgs_ind);
 
-    }
-  }
+
+} // voxels view y
+
+///////////////////////////////////////////////////////////////////////////////
+void draw() {
+
+  if (do_voxels) {
+    if (do_view_x) {
+      drawVoxelsViewX();
+    } // do view x
+    
+    if (do_view_y) {
+      drawVoxelsViewY();
+    } // do view y
+  } // do voxels
 
   if ((keys_pressed.size() > 10) || 
       ((keys_pressed.size() > 0) && (count - last_key_count > 100))) {
