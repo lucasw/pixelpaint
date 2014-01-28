@@ -161,6 +161,10 @@ void setupPaletteFromImage(PImage img) {
 void loadNewImage(String image_file, PImage img) {
   println("attempting to load " + image_file);
   img = loadImage(image_file);  // TBD pass in or return PImage instead
+  if (img == null) {
+    println("bad image " + image_file + ", returning");
+    return;
+  }
   println("loaded " + str(img.width) + "x" + str(img.height)); 
   
   imgs.set(imgs_ind, img);   
