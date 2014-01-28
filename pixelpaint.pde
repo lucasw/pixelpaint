@@ -167,7 +167,9 @@ void loadNewImage(String image_file, PImage img) {
   }
   println("loaded " + str(img.width) + "x" + str(img.height) + " " + str(imgs_ind)); 
   
-  imgs.set(imgs_ind, img);   
+  imgs.set(imgs_ind, img);  
+  is_dirty = true;
+  img.updatePixels();
   //setupPaletteFromImage(img);
   
 }
@@ -803,6 +805,55 @@ void drawVoxelsViewY() {
 
 } // voxels view y
 
+void doShift() {
+  PImage temp = createImage(img.width, img.height, ARGB);
+   
+    temp.loadPixels();
+    for (int y = 0; y < img.height; y++) {
+    for (int x = 0; x < img.width;  x++) {
+
+      int src_ind = y * img.width + x;
+      int dx = (x + shift_x + img.width) % img.width;
+      int dy = (y + shift_y + img.height) % img.height;
+      int dst_ind = dy * img.width + dx; 
+      
+      temp.pixels[dst_ind] = img.pixels[src_ind];
+
+      //println("src_ind " + str(x) + " " + str(y)  + " -> " +
+      //    str(dx) + " " + str(dy) );
+    }}
+    temp.updatePixels();
+   
+    img = temp;
+    imgs.set(imgs_ind, img);
+    // copy is not reliable due to forced interpolation
+    //img.copy(temp, 0 ,0, img.width, img.height, 0, 0, img.width, img.height);
+    //img.updatePixels();
+
+    shift_x = 0;
+    shift_y = 0;
+
+} // do shift
+
+void handleMouse(int rwd2, int rht2) {
+  cur_x = (mouseX - rwd2/4)/rwd2;
+    cur_y = (mouseY - rht2/4)/rht2;
+
+    if (cur_x >= img.width)  cur_x = img.width - 1;
+    if (cur_y >= img.height) cur_y = img.height - 1;
+    if (cur_x < 0)  cur_x = 0;
+    if (cur_y < 0)  cur_y = 0;
+    //println(str(mouseX) + " " + str(mouseY) + " " + str(cur_x) + " " + str(cur_y));
+
+    if (mousePressed && (mouseButton == LEFT)) {
+      do_pixel_change = true;
+    }
+    if (mousePressed && (mouseButton == RIGHT)) {
+      //do_pixel_change = true;
+      // TBD use a different secondary color
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 void draw() {
 
@@ -824,6 +875,7 @@ void draw() {
  
   /// update stuff
   if (imgs.size() > 0) {
+  
   if (add_frame) {
     duplicateFrame();
     add_frame = false;
@@ -852,37 +904,13 @@ void draw() {
       //println("advanced frame, cur sequence index " + str(imgs_ind) + "/" + imgs.size());
       next_frame = false;
   }
+
   } else {
     println("imgs wasn't initialized properly?");
   }
 
   if (do_shift) {
-    PImage temp = createImage(img.width, img.height, ARGB);
-   
-    temp.loadPixels();
-    for (int y = 0; y < img.height; y++) {
-    for (int x = 0; x < img.width;  x++) {
-
-      int src_ind = y * img.width + x;
-      int dx = (x + shift_x + img.width) % img.width;
-      int dy = (y + shift_y + img.height) % img.height;
-      int dst_ind = dy * img.width + dx; 
-      
-      temp.pixels[dst_ind] = img.pixels[src_ind];
-
-      //println("src_ind " + str(x) + " " + str(y)  + " -> " +
-      //    str(dx) + " " + str(dy) );
-    }}
-    temp.updatePixels();
-   
-    img = temp;
-    imgs.set(imgs_ind, img);
-    // copy is not reliable due to forced interpolation
-    //img.copy(temp, 0 ,0, img.width, img.height, 0, 0, img.width, img.height);
-    //img.updatePixels();
-
-    shift_x = 0;
-    shift_y = 0;
+    doShift();
     do_shift = false;
   } // do_shift
 
@@ -896,22 +924,7 @@ void draw() {
   // responsitivity?  The frame rate of the drawing of the image shouldn't
   // limit drawing speed.
   if (mouse_mode) {
-    cur_x = (mouseX - rwd2/4)/rwd2;
-    cur_y = (mouseY - rht2/4)/rht2;
-
-    if (cur_x >= img.width)  cur_x = img.width - 1;
-    if (cur_y >= img.height) cur_y = img.height - 1;
-    if (cur_x < 0)  cur_x = 0;
-    if (cur_y < 0)  cur_y = 0;
-    //println(str(mouseX) + " " + str(mouseY) + " " + str(cur_x) + " " + str(cur_y));
-
-    if (mousePressed && (mouseButton == LEFT)) {
-      do_pixel_change = true;
-    }
-    if (mousePressed && (mouseButton == RIGHT)) {
-      //do_pixel_change = true;
-      // TBD use a different secondary color
-    }
+    handleMouse(rwd2, rht2);
   } else if (do_voxels) {
     final int dx = mouseX - old_mouse_x;
     final int dy = mouseY - old_mouse_y;
@@ -923,7 +936,6 @@ void draw() {
   }
 
   ///
-  //
   //
 
   // update the image
