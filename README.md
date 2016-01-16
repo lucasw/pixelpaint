@@ -6,6 +6,15 @@ Keyboard only low resolution image creating/editing
 
 Forked from [https://github.com/lucasw/pixelpaint](https://github.com/lucasw/pixelpaint)
 
+Demonstration videos:
+
+https://www.youtube.com/watch?v=uTog_MlFZtk
+
+https://www.youtube.com/watch?v=v9qhyyrgskY
+
+https://www.youtube.com/watch?v=zd-pPMiIEJQ
+
+
 Changes/additions
 =================
 
